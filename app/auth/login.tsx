@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import api from '../lib/api';
 import storage from '../lib/storage';
+import React from 'react';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -56,32 +57,33 @@ export default function LoginScreen() {
       const response = await api.post('/login', { email, password });
       console.log('Login response:', response.data);
 
-      if (response.data.status === 'success') {
-        const token = response.data.data?.token || response.data.token;
+if (response.data.status === 'success') {
+  const token = response.data.data?.token || response.data.token;
 
-        if (!token) {
-          Alert.alert('የተሳሳተ መግቢያ', 'ቶከን አልተገኘም');
-          setLoading(false);
-          return;
-        }
+  if (!token) {
+    Alert.alert('የተሳሳተ መግቢያ', 'ቶከን አልተገኘም');
+    setLoading(false);
+    return;
+  }
 
-        // Save token using storage utility
-        const tokenSaved = await storage.setItem('authToken', token);
-        
-        if (!tokenSaved) {
-          console.warn('Token not saved to persistent storage');
-        }
-        
-        // Handle remember me
-        if (rememberMe) {
-          await storage.setItem('rememberedEmail', email);
-        } else {
-          await storage.removeItem('rememberedEmail');
-        }
-        
-        // Navigate to tabs dashboard
-        router.replace('/(tab)');
-      } else {
+  const tokenSaved = await storage.setItem('authToken', token);
+
+  console.log("Token to save:", token);
+  console.log("Token saved result:", tokenSaved);
+
+  const storedToken = await storage.getItem('authToken');
+  console.log("Token after save check:", storedToken);
+
+  if (rememberMe) {
+    await storage.setItem('rememberedEmail', email);
+  } else {
+    await storage.removeItem('rememberedEmail');
+  }
+
+  router.replace('/(tab)');
+}
+
+else {
         Alert.alert('የተሳሳተ መግቢያ', 'እባክዎ ኢሜይል እና የይለፍ ቃልዎን ያረጋግጡ');
       }
     } catch (error: any) {
@@ -121,13 +123,7 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
+ 
 
           {/* Welcome Text */}
           <View style={styles.welcomeContainer}>

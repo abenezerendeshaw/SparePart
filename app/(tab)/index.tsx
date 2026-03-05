@@ -20,31 +20,50 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Linking
 } from 'react-native';
 import api from '../lib/api';
 import storage from '../lib/storage';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
 
-// Types
+// Types based on actual API response
 interface Product {
-  id: string | number;
-  product_name: string;
+  id: number;
   product_code: string;
+  product_name: string;
   category: string;
+  brand: string | null;
   total_stock: number;
-  selling_price: number;
-  unit?: string;
-  reorder_level?: number;
+  selling_price: string | number;
+  status: string;
 }
 
 interface Sale {
-  id: string | number;
-  grand_total: number;
-  sale_date?: string;
-  created_at?: string;
-  invoice_number?: string;
+  id: number;
+  sale_code: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  total_amount: string;
+  discount: string;
+  tax: string;
+  grand_total: string;
+  paid_amount: string;
+  due_amount: string;
+  profit: string;
+  payment_method: string;
+  payment_status: string;
+  sale_date: string;
+  sale_time: string;
+  sold_by: number;
+  owner_id: number;
+  notes: string;
+  created_at: string;
+  cashier_name: string;
+  item_count: number;
 }
 
 interface DashboardStats {
@@ -54,6 +73,9 @@ interface DashboardStats {
   totalRevenue: number;
   lowStockCount: number;
   todaySales: number;
+  todayRevenue: number;
+  recentProducts: Product[];
+  recentSales: Sale[];
 }
 
 export default function Dashboard() {
@@ -62,7 +84,8 @@ export default function Dashboard() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userName, setUserName] = useState('ነጋዴ');
+  const [userFullName, setUserFullName] = useState('ነጋዴ');
+  const [userRole, setUserRole] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Animation values
@@ -114,14 +137,14 @@ export default function Dashboard() {
     const scale = interpolate(
       scrollY.value,
       [0, 200],
-      [1, 0.8],
+      [1, 0.9],
       Extrapolate.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, 200],
-      [0, 20],
+      [0, 10],
       Extrapolate.CLAMP
     );
 
@@ -145,61 +168,79 @@ export default function Dashboard() {
     });
   };
 
+  const fetchUserData = async () => {
+    try {
+      // Try to get user info from token or API
+      const token = await storage.getItem('authToken');
+      if (token) {
+        // You can decode the JWT token to get user info
+        // This is a simple example - you might have a /user endpoint
+        const base64Url = token.split('.')[1];
+        if (base64Url) {
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(atob(base64));
+          if (payload.full_name) {
+            setUserFullName(payload.full_name);
+          }
+          if (payload.role) {
+            setUserRole(payload.role);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error fetching user data:', error);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const token = await storage.getItem('authToken');
+      
       if (!token) {
         router.replace('/auth/login');
         return;
       }
 
-      const config = { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      };
+      // Fetch user data first
+      await fetchUserData();
 
-      // Fetch products and sales in parallel
-      const [productsRes, salesRes] = await Promise.all([
-        api.get('/products', config),
-        api.get('/sales', config).catch(() => ({ data: { data: { sales: [] } } }))
-      ]);
-
-      console.log('Products fetched:', productsRes.data);
-
-      // Handle different response structures
-      const productsData = productsRes.data.data?.products || 
-                          productsRes.data.products || 
-                          productsRes.data || [];
-      
-      const salesData = salesRes.data.data?.sales || 
-                       salesRes.data.sales || 
-                       salesRes.data || [];
-
-      setProducts(Array.isArray(productsData) ? productsData : []);
-      setSales(Array.isArray(salesData) ? salesData : []);
-
-      // Try to get user info if available
-      try {
-        const userRes = await api.get('/user', config);
-        if (userRes.data.data?.full_name) {
-          setUserName(userRes.data.data.full_name.split(' ')[0]);
+      const api = axios.create({
+        baseURL: 'https://specificethiopia.com/inventory/api/v1',
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
-      } catch (error) {
-        // Ignore user fetch error
+      });
+
+      // Fetch products
+      const productsResponse = await api.get('/products?limit=100');
+      
+      // Fetch sales
+      let salesResponse = { data: { data: { sales: [] } } };
+      try {
+        salesResponse = await api.get('/sales?limit=50');
+        console.log('Sales fetched:', salesResponse.data?.data?.sales?.length || 0);
+      } catch (salesError) {
+        console.log('Sales fetch failed:', salesError.message);
+      }
+
+      // Extract data
+      const productsData = productsResponse.data?.data?.products || [];
+      const salesData = salesResponse.data?.data?.sales || [];
+
+      setProducts(productsData);
+      setSales(salesData);
+
+      // If we have sales data and user name not set, use cashier name
+      if (salesData.length > 0 && salesData[0].cashier_name && userFullName === 'ነጋዴ') {
+        setUserFullName(salesData[0].cashier_name);
       }
 
     } catch (error: any) {
-      console.log('Fetch Error:', error.response || error);
-      
-      if (error.response?.status === 401) {
-        // Token expired
-        await storage.removeItem('authToken');
-        router.replace('/auth/login');
-      } else {
-        Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
-      }
+      console.error('Fetch error:', error.message);
+      Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -215,19 +256,22 @@ export default function Dashboard() {
     fetchData();
   };
 
- 
+  // Calculate today's revenue
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todaySales = sales.filter(sale => sale.sale_date === todayStr);
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + Number(sale.grand_total), 0);
+
   // Calculate statistics
   const stats: DashboardStats = {
     totalProducts: products.length,
     totalStock: products.reduce((sum, item) => sum + (Number(item.total_stock) || 0), 0),
     totalSales: sales.length,
     totalRevenue: sales.reduce((sum, sale) => sum + (Number(sale.grand_total) || 0), 0),
-    lowStockCount: products.filter(p => (p.total_stock || 0) <= (p.reorder_level || 5)).length,
-    todaySales: sales.filter(sale => {
-      const today = new Date().toDateString();
-      const saleDate = sale.sale_date || sale.created_at || '';
-      return new Date(saleDate).toDateString() === today;
-    }).length
+    lowStockCount: products.filter(p => (p.total_stock || 0) <= 10).length,
+    todaySales: todaySales.length,
+    todayRevenue: todayRevenue,
+    recentProducts: products.slice(0, 5),
+    recentSales: sales.slice(0, 5)
   };
 
   const StatCard = ({ title, value, icon, colors, subtitle }: any) => (
@@ -250,13 +294,12 @@ export default function Dashboard() {
 
   const ProductItem = ({ item }: { item: Product }) => {
     const stockLevel = item.total_stock || 0;
-    const reorderLevel = item.reorder_level || 5;
-    const isLowStock = stockLevel <= reorderLevel;
+    const isLowStock = stockLevel <= 10;
 
     return (
       <TouchableOpacity 
         style={styles.productItem}
-        onPress={() => Alert.alert('ዝርዝሮች', `የ${item.product_name} ዝርዝሮች`)}
+        onPress={() => router.push(`/(tab)/products/${item.id}`)}
       >
         <View style={styles.productHeader}>
           <View style={styles.productInfo}>
@@ -265,14 +308,14 @@ export default function Dashboard() {
           </View>
           <View style={[styles.stockBadge, isLowStock && styles.lowStockBadge]}>
             <Text style={[styles.stockText, isLowStock && styles.lowStockText]}>
-              {stockLevel} {item.unit || 'pcs'}
+              {stockLevel} pcs
             </Text>
           </View>
         </View>
         
         <View style={styles.productFooter}>
-          <Text style={styles.productCategory}>{item.category}</Text>
-          <Text style={styles.productPrice}>ETB {item.selling_price?.toLocaleString()}</Text>
+          <Text style={styles.productCategory}>{item.category || 'ሌሎች'}</Text>
+          <Text style={styles.productPrice}>ETB {Number(item.selling_price).toLocaleString()}</Text>
         </View>
 
         {isLowStock && (
@@ -282,6 +325,64 @@ export default function Dashboard() {
           </View>
         )}
       </TouchableOpacity>
+    );
+  };
+
+  const SaleItem = ({ item }: { item: Sale }) => {
+    const isToday = item.sale_date === todayStr;
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.saleItem, isToday && styles.todaySaleItem]}
+        onPress={() => router.push(`/(tab)/sales/${item.id}`)}
+      >
+        <View style={styles.saleHeader}>
+          <MaterialCommunityIcons name="receipt" size={20} color="#f59e0b" />
+          <Text style={styles.saleInvoice}>{item.sale_code}</Text>
+          <View style={[styles.paymentStatusBadge, 
+            { backgroundColor: item.payment_status === 'paid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)' }
+          ]}>
+            <Text style={[
+              styles.paymentStatusText,
+              { color: item.payment_status === 'paid' ? '#10b981' : '#f59e0b' }
+            ]}>
+              {item.payment_status === 'paid' ? 'ተከፍሏል' : 'ዕዳ'}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.saleBody}>
+          <View>
+            <Text style={styles.customerName}>{item.customer_name}</Text>
+            <Text style={styles.saleTime}>{item.sale_time}</Text>
+          </View>
+          <View style={styles.paymentBadge}>
+            <MaterialCommunityIcons 
+              name={item.payment_method === 'cash' ? 'cash' : 'credit-card'} 
+              size={12} 
+              color="#10b981" 
+            />
+            <Text style={styles.paymentText}>{item.payment_method}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.saleFooter}>
+          <Text style={styles.saleItems}>{item.item_count} እቃዎች</Text>
+          <Text style={styles.saleAmount}>ETB {Number(item.grand_total).toLocaleString()}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const handleContactSupport = () => {
+    Alert.alert(
+      'እገዛ እና ድጋፍ',
+      'እንዴት ልንረዳዎ እንችላለን?',
+      [
+        { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251911234567') },
+        { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:support@autoparts.com') },
+        { text: 'ተይ', style: 'cancel' }
+      ]
     );
   };
 
@@ -299,14 +400,21 @@ export default function Dashboard() {
     <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
       
-      {/* Animated Header */}
+      {/* Animated Header with User Full Name */}
       <Animated.View style={[styles.header, headerAnimatedStyle]}>
-        <View>
-          <Text style={styles.greeting}>እንኳን ደህና መጡ፣</Text>
-          <Text style={styles.userName}>{userName}!</Text>
-          <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
-            {formatDate(currentTime)}
-          </Animated.Text>
+        <View style={styles.userInfoContainer}>
+          <View style={styles.userAvatar}>
+            <Text style={styles.userAvatarText}>
+              {userFullName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userFullName}>{userFullName}</Text>
+            <Text style={styles.userRole}>{userRole || 'ነጋዴ'}</Text>
+            <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
+              {formatDate(currentTime)}
+            </Animated.Text>
+          </View>
         </View>
         
         <View style={styles.headerActions}>
@@ -320,13 +428,6 @@ export default function Dashboard() {
                 <Text style={styles.badgeText}>{stats.lowStockCount}</Text>
               </View>
             )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => router.push('/(tab)/profile')}
-          >
-            <MaterialCommunityIcons name="account-circle" size={32} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -344,6 +445,7 @@ export default function Dashboard() {
             progressViewOffset={HEADER_MAX_HEIGHT}
           />
         }
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Add top padding to account for fixed header */}
         <View style={{ height: HEADER_MAX_HEIGHT }} />
@@ -366,12 +468,14 @@ export default function Dashboard() {
             title="የዛሬ ሽያጮች"
             value={stats.todaySales}
             icon="cart-outline"
+            subtitle={`ETB ${stats.todayRevenue.toLocaleString()}`}
             colors={['#f59e0b', '#d97706']}
           />
           <StatCard
             title="አጠቃላይ ገቢ"
             value={`ETB ${stats.totalRevenue.toLocaleString()}`}
             icon="currency-usd"
+            subtitle={`ከ${stats.totalSales} ሽያጮች`}
             colors={['#8b5cf6', '#6d28d9']}
           />
         </View>
@@ -381,7 +485,7 @@ export default function Dashboard() {
           <TouchableOpacity 
             style={styles.warningContainer}
             onPress={() => {
-              const lowStockProducts = products.filter(p => (p.total_stock || 0) <= (p.reorder_level || 5));
+              const lowStockProducts = products.filter(p => (p.total_stock || 0) <= 10);
               Alert.alert(
                 'ዝቅተኛ ክምችት ያላቸው ምርቶች',
                 lowStockProducts.map(p => `• ${p.product_name}: ${p.total_stock} ቀርቷል`).join('\n')
@@ -399,6 +503,25 @@ export default function Dashboard() {
           </TouchableOpacity>
         )}
 
+        {/* Recent Sales Section */}
+        {stats.recentSales.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>የቅርብ ጊዜ ሽያጮች</Text>
+              <TouchableOpacity onPress={() => router.push('/(tab)/sales')}>
+                <Text style={styles.seeAllLink}>ሁሉንም ተመልከት</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={stats.recentSales}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              renderItem={({ item }) => <SaleItem item={item} />}
+            />
+          </View>
+        )}
+
         {/* Recent Products Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -408,7 +531,7 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
 
-          {products.length === 0 ? (
+          {stats.recentProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="package-variant" size={48} color="#475569" />
               <Text style={styles.emptyText}>ምንም ምርቶች አልተገኙም</Text>
@@ -421,7 +544,7 @@ export default function Dashboard() {
             </View>
           ) : (
             <FlatList
-              data={products.slice(0, 5)}
+              data={stats.recentProducts}
               keyExtractor={(item) => item.id.toString()}
               scrollEnabled={false}
               renderItem={({ item }) => <ProductItem item={item} />}
@@ -461,37 +584,43 @@ export default function Dashboard() {
 
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => router.push('/(tab)/reports')}
+              onPress={() => router.push('/(tab)/products')}
             >
               <LinearGradient
                 colors={['#8b5cf6', '#6d28d9']}
                 style={styles.actionGradient}
               >
-                <MaterialCommunityIcons name="chart-bar" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>ሪፖርቶች</Text>
+                <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#ffffff" />
+                <Text style={styles.actionText}>ሁሉም ምርቶች</Text>
               </LinearGradient>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => router.push('/(tab)/inventory')}
+              onPress={() => router.push('/(tab)/sales')}
             >
               <LinearGradient
                 colors={['#f59e0b', '#d97706']}
                 style={styles.actionGradient}
               >
-                <MaterialCommunityIcons name="clipboard-list" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>ክምችት</Text>
+                <MaterialCommunityIcons name="history" size={24} color="#ffffff" />
+                <Text style={styles.actionText}>ሽያጭ ታሪክ</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Contact Support Button */}
+        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
+          <MaterialCommunityIcons name="headset" size={20} color="#2974ff" />
+          <Text style={styles.supportText}>እገዛ እና ድጋፍ</Text>
+        </TouchableOpacity>
 
-          <View style={{ height: 150 }} />
-
-       
-
+        {/* Version */}
+        <Text style={styles.versionText}>ስሪት 2.4.0</Text>
+        
+        {/* Extra bottom padding for better scrolling */}
+        <View style={{ height: 100 }} />
       </Animated.ScrollView>
 
       {/* Animated Floating Action Button */}
@@ -505,6 +634,7 @@ export default function Dashboard() {
               [
                 { text: 'ምርት ጨምር', onPress: () => router.push('/(tab)/products/add') },
                 { text: 'አዲስ ሽያጭ', onPress: () => router.push('/(tab)/sales/new') },
+                { text: 'እገዛ', onPress: handleContactSupport },
                 { text: 'ተይ', style: 'cancel' }
               ]
             );
@@ -512,10 +642,8 @@ export default function Dashboard() {
         >
           <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
         </TouchableOpacity>
-         <View style={{ height: 100 }} />
       </Animated.View>
     </LinearGradient>
-    
   );
 }
 
@@ -549,24 +677,49 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(41, 116, 255, 0.3)',
   },
-  greeting: {
-    color: '#94a3b8',
-    fontSize: 14,
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  userName: {
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2974ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  userAvatarText: {
     color: '#ffffff',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 4,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userFullName: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  userRole: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginBottom: 2,
   },
   date: {
     color: '#64748b',
-    fontSize: 12,
+    fontSize: 11,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    marginLeft: 12,
   },
   notificationButton: {
     position: 'relative',
@@ -595,18 +748,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     gap: 12,
+    marginBottom: 8,
   },
   statCard: {
     width: (width - 44) / 2,
@@ -647,7 +794,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 12,
+    marginBottom: 8,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -669,7 +817,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -754,6 +902,86 @@ const styles = StyleSheet.create({
     color: '#ff9800',
     fontSize: 12,
   },
+  saleItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  todaySaleItem: {
+    borderColor: '#f59e0b',
+    borderWidth: 1,
+  },
+  saleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  saleInvoice: {
+    color: '#f59e0b',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  paymentStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  paymentStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  saleBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  customerName: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  saleTime: {
+    color: '#64748b',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  paymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  paymentText: {
+    color: '#10b981',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  saleFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  saleItems: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  saleAmount: {
+    color: '#10b981',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -808,7 +1036,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  logoutButton: {
+  supportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -816,12 +1044,14 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
     padding: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(41, 116, 255, 0.1)',
     borderRadius: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(41, 116, 255, 0.3)',
   },
-  logoutText: {
-    color: '#ef4444',
+  supportText: {
+    color: '#2974ff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -830,12 +1060,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 90,
+    marginBottom: 10,
     letterSpacing: 1,
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 30,
     right: 20,
     zIndex: 100,
   },
@@ -851,5 +1081,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
+    marginBottom: 20,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
 });
