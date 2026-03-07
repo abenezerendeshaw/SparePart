@@ -21,7 +21,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Linking
+  Linking,
+  ScrollView
 } from 'react-native';
 import api from '../lib/api';
 import storage from '../lib/storage';
@@ -270,7 +271,7 @@ export default function Dashboard() {
     lowStockCount: products.filter(p => (p.total_stock || 0) <= 10).length,
     todaySales: todaySales.length,
     todayRevenue: todayRevenue,
-    recentProducts: products.slice(0, 5),
+    recentProducts: products.slice(0, 10),
     recentSales: sales.slice(0, 5)
   };
 
@@ -292,38 +293,60 @@ export default function Dashboard() {
     </LinearGradient>
   );
 
-  const ProductItem = ({ item }: { item: Product }) => {
+  const ProductCard = ({ item }: { item: Product }) => {
     const stockLevel = item.total_stock || 0;
     const isLowStock = stockLevel <= 10;
 
     return (
       <TouchableOpacity 
-        style={styles.productItem}
+        style={styles.productCard}
         onPress={() => router.push(`/(tab)/products/${item.id}`)}
       >
-        <View style={styles.productHeader}>
-          <View style={styles.productInfo}>
-            <Text style={styles.productName}>{item.product_name}</Text>
-            <Text style={styles.productCode}>{item.product_code}</Text>
+        <LinearGradient
+          colors={isLowStock ? ['rgba(239, 68, 68, 0.1)', 'rgba(185, 28, 28, 0.05)'] : ['rgba(41, 116, 255, 0.1)', 'rgba(26, 76, 158, 0.05)']}
+          style={styles.productCardGradient}
+        >
+          <View style={styles.productIconContainer}>
+            <MaterialCommunityIcons 
+              name={item.category?.toLowerCase().includes('brake') ? 'car-brake-parking' : 
+                    item.category?.toLowerCase().includes('engine') ? 'engine' : 
+                    item.category?.toLowerCase().includes('battery') ? 'car-battery' : 
+                    item.category?.toLowerCase().includes('tire') ? 'tire' : 
+                    'package-variant'} 
+              size={32} 
+              color={isLowStock ? '#ef4444' : '#2974ff'} 
+            />
           </View>
-          <View style={[styles.stockBadge, isLowStock && styles.lowStockBadge]}>
-            <Text style={[styles.stockText, isLowStock && styles.lowStockText]}>
-              {stockLevel} pcs
+          
+          <View style={styles.productCardContent}>
+            <Text style={styles.productCardName} numberOfLines={2}>
+              {item.product_name}
             </Text>
+            <Text style={styles.productCardCode}>{item.product_code}</Text>
+            
+            <View style={styles.productCardFooter}>
+              <View style={[styles.stockBadge, isLowStock && styles.lowStockBadge]}>
+                <MaterialCommunityIcons 
+                  name={isLowStock ? 'alert' : 'package-variant'} 
+                  size={12} 
+                  color={isLowStock ? '#ef4444' : '#2974ff'} 
+                />
+                <Text style={[styles.stockText, isLowStock && styles.lowStockText]}>
+                  {stockLevel}
+                </Text>
+              </View>
+              <Text style={styles.productCardPrice}>
+                ETB {Number(item.selling_price).toLocaleString()}
+              </Text>
+            </View>
           </View>
-        </View>
-        
-        <View style={styles.productFooter}>
-          <Text style={styles.productCategory}>{item.category || 'ሌሎች'}</Text>
-          <Text style={styles.productPrice}>ETB {Number(item.selling_price).toLocaleString()}</Text>
-        </View>
-
-        {isLowStock && (
-          <View style={styles.warningBadge}>
-            <MaterialCommunityIcons name="alert" size={14} color="#ff9800" />
-            <Text style={styles.warningText}>ክምችት አነስተኛ ነው</Text>
-          </View>
-        )}
+          
+          {isLowStock && (
+            <View style={styles.lowStockOverlay}>
+              <MaterialCommunityIcons name="alert-circle" size={16} color="#ef4444" />
+            </View>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
@@ -337,8 +360,10 @@ export default function Dashboard() {
         onPress={() => router.push(`/(tab)/sales/${item.id}`)}
       >
         <View style={styles.saleHeader}>
-          <MaterialCommunityIcons name="receipt" size={20} color="#f59e0b" />
-          <Text style={styles.saleInvoice}>{item.sale_code}</Text>
+          <View style={styles.saleHeaderLeft}>
+            <MaterialCommunityIcons name="receipt" size={20} color="#f59e0b" />
+            <Text style={styles.saleInvoice}>{item.sale_code}</Text>
+          </View>
           <View style={[styles.paymentStatusBadge, 
             { backgroundColor: item.payment_status === 'paid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)' }
           ]}>
@@ -480,28 +505,72 @@ export default function Dashboard() {
           />
         </View>
 
-        {/* Low Stock Warning */}
-        {stats.lowStockCount > 0 && (
-          <TouchableOpacity 
-            style={styles.warningContainer}
-            onPress={() => {
-              const lowStockProducts = products.filter(p => (p.total_stock || 0) <= 10);
-              Alert.alert(
-                'ዝቅተኛ ክምችት ያላቸው ምርቶች',
-                lowStockProducts.map(p => `• ${p.product_name}: ${p.total_stock} ቀርቷል`).join('\n')
-              );
-            }}
-          >
-            <MaterialCommunityIcons name="alert-circle" size={24} color="#ff9800" />
-            <View style={styles.warningContent}>
-              <Text style={styles.warningTitle}>ዝቅተኛ ክምችት ማስጠንቀቂያ</Text>
-              <Text style={styles.warningDesc}>
-                {stats.lowStockCount} ምርቶች ክምችት ማዘዝ ያስፈልጋቸዋል
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#ff9800" />
-          </TouchableOpacity>
-        )}
+{/* Low Stock Warning */}
+{stats.lowStockCount > 0 && (
+  <TouchableOpacity 
+    style={styles.warningContainer}
+    onPress={() => {
+      const lowStockProducts = products.filter(p => (p.total_stock || 0) <= (p.min_stock || 10));
+      
+      if (lowStockProducts.length > 0) {
+        // Create a more detailed alert
+        const alertMessage = lowStockProducts.map(p => 
+          `• ${p.product_name}\n  ቀሪ: ${p.total_stock} ${p.unit || 'pcs'}\n  ዝቅተኛ: ${p.min_stock || 10}`
+        ).join('\n\n');
+        
+        Alert.alert(
+          '⚠️ ዝቅተኛ ክምችት ያላቸው ምርቶች',
+          alertMessage,
+          [
+            { 
+              text: 'ዝርዝር ለማየት', 
+              onPress: () => {
+                // Navigate to low stock filter view
+                router.push('/products?filter=low_stock');
+              } 
+            },
+            { text: 'ዝጋ', style: 'cancel' }
+          ]
+        );
+      }
+    }}
+  >
+    <View style={styles.warningIconContainer}>
+      <MaterialCommunityIcons name="alert" size={28} color="#ff9800" />
+      <View style={styles.warningBadge}>
+        <Text style={styles.warningBadgeText}>{stats.lowStockCount}</Text>
+      </View>
+    </View>
+    
+    <View style={styles.warningContent}>
+      <Text style={styles.warningTitle}>ዝቅተኛ ክምችት ማስጠንቀቂያ</Text>
+      <Text style={styles.warningDesc}>
+        {stats.lowStockCount} ምርቶች {stats.lowStockCount === 1 ? 'ክምችት ማዘዝ ያስፈልገዋል' : 'ክምችት ማዘዝ ያስፈልጋቸዋል'}
+      </Text>
+      
+      {/* Progress bar for low stock */}
+      <View style={styles.warningProgressContainer}>
+        <View style={styles.warningProgressBg}>
+          <View 
+            style={[
+              styles.warningProgressFill, 
+              { 
+                width: `${Math.min(100, (stats.lowStockCount / products.length) * 100)}%`,
+                backgroundColor: stats.lowStockCount > 10 ? '#ff9800' : 
+                                stats.lowStockCount > 5 ? '#f57c00' : '#ef4444'
+              }
+            ]} 
+          />
+        </View>
+        <Text style={styles.warningProgressText}>
+          {stats.lowStockCount} / {products.length} ምርቶች
+        </Text>
+      </View>
+    </View>
+    
+    <MaterialCommunityIcons name="chevron-right" size={28} color="#ff9800" />
+  </TouchableOpacity>
+)}
 
         {/* Recent Sales Section */}
         {stats.recentSales.length > 0 && (
@@ -513,16 +582,13 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
 
-            <FlatList
-              data={stats.recentSales}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              renderItem={({ item }) => <SaleItem item={item} />}
-            />
+            {stats.recentSales.map((item) => (
+              <SaleItem key={item.id} item={item} />
+            ))}
           </View>
         )}
 
-        {/* Recent Products Section */}
+        {/* Recent Products Section - Horizontal Scroll */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>የቅርብ ጊዜ ምርቶች</Text>
@@ -543,12 +609,15 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
           ) : (
-            <FlatList
-              data={stats.recentProducts}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              renderItem={({ item }) => <ProductItem item={item} />}
-            />
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.productsHorizontalScroll}
+            >
+              {stats.recentProducts.map((item) => (
+                <ProductCard key={item.id} item={item} />
+              ))}
+            </ScrollView>
           )}
         </View>
 
@@ -789,18 +858,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 152, 0, 0.1)',
-    marginHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 8,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 152, 0, 0.3)',
-  },
+ 
   warningContent: {
     flex: 1,
     marginLeft: 12,
@@ -834,38 +892,56 @@ const styles = StyleSheet.create({
     color: '#2974ff',
     fontSize: 14,
   },
-  productItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  productsHorizontalScroll: {
+    paddingRight: 20,
+    gap: 12,
+  },
+  productCard: {
+    width: 180,
+    marginRight: 12,
+  },
+  productCardGradient: {
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  productHeader: {
+  productIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(41, 116, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  productCardContent: {
+    flex: 1,
+  },
+  productCardName: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  productCardCode: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginBottom: 8,
+  },
+  productCardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  productCode: {
-    color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 2,
   },
   stockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(41, 116, 255, 0.2)',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
+    gap: 4,
   },
   lowStockBadge: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
@@ -878,29 +954,15 @@ const styles = StyleSheet.create({
   lowStockText: {
     color: '#ef4444',
   },
-  productFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  productCategory: {
-    color: '#64748b',
-    fontSize: 12,
-  },
-  productPrice: {
+  productCardPrice: {
     color: '#10b981',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
-  warningBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 4,
-  },
-  warningText: {
-    color: '#ff9800',
-    fontSize: 12,
+  lowStockOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   saleItem: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -916,8 +978,13 @@ const styles = StyleSheet.create({
   },
   saleHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  saleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   saleInvoice: {
@@ -1086,4 +1153,69 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
+
+
+  warningContainer: {
+  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+  borderRadius: 16,
+  padding: 16,
+  marginHorizontal: 20,
+  marginBottom: 16,
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ff9800',
+  shadowColor: '#ff9800',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 3,
+},
+warningIconContainer: {
+  position: 'relative',
+  marginRight: 12,
+},
+warningBadge: {
+  position: 'absolute',
+  top: -8,
+  right: -8,
+  backgroundColor: '#ef4444',
+  borderRadius: 12,
+  minWidth: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 4,
+  borderWidth: 2,
+  borderColor: '#0f1623',
+},
+warningBadgeText: {
+  color: '#ffffff',
+  fontSize: 10,
+  fontWeight: 'bold',
+},
+
+warningProgressContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+warningProgressBg: {
+  flex: 1,
+  height: 6,
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  borderRadius: 3,
+  overflow: 'hidden',
+},
+warningProgressFill: {
+  height: '100%',
+  borderRadius: 3,
+},
+warningProgressText: {
+  color: '#94a3b8',
+  fontSize: 11,
+  fontWeight: '500',
+},
+
+
 });

@@ -38,7 +38,7 @@ interface Sale {
   notes: string;
   created_at: string;
   cashier_name: string;
-  item_count: number;
+  item_count: number | string; // Can be number or string
 }
 
 interface SalesStats {
@@ -215,6 +215,16 @@ export default function SalesScreen() {
     const isDue = item.payment_status === 'due';
     const isPaid = item.payment_status === 'paid';
 
+    // Ensure item_count is treated as a number
+    const itemCount = Number(item.item_count) || 0;
+    
+    // Get appropriate Amharic word for items
+    const getItemText = (count: number) => {
+      if (count === 1) return 'እቃ';
+      if (count >= 2 && count <= 10) return 'እቃዎች';
+      return 'እቃዎች';
+    };
+
     return (
       <TouchableOpacity 
         style={styles.saleCard}
@@ -273,7 +283,9 @@ export default function SalesScreen() {
           <View style={styles.saleDetails}>
             <View style={styles.detailItem}>
               <MaterialCommunityIcons name="package-variant" size={14} color="#64748b" />
-              <Text style={styles.detailText}>{item.item_count} እቃዎች</Text>
+              <Text style={styles.detailText}>
+                {itemCount} {getItemText(itemCount)}
+              </Text>
             </View>
 
             <View style={styles.detailItem}>

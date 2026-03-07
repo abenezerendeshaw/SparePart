@@ -1,23 +1,23 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  Linking,
+  Modal,
+  RefreshControl,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Linking,
-  Share,
-  TextInput,
-  Modal,
-  RefreshControl,
 } from 'react-native';
-import axios from 'axios';
 import storage from '../lib/storage';
 
 interface UserData {
@@ -55,11 +55,14 @@ export default function ProfileScreen() {
     phone: '',
     email: '',
   });
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
-  });
+const [passwordForm, setPasswordForm] = useState({
+  current_password: '',
+  new_password: '',
+  confirm_password: '',
+  showCurrent: false,
+  showNew: false,
+  showConfirm: false,
+});
 
   useEffect(() => {
     loadUserProfile();
@@ -375,7 +378,7 @@ export default function ProfileScreen() {
           
           <View style={styles.profileInfo}>
             <Text style={styles.profileFullName}>{user.full_name}</Text>
-            <Text style={styles.profileUsername}>@{user.username}</Text>
+            <Text style={styles.profileUsername}>{user.sync_status}</Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>{user.role}</Text>
             </View>
@@ -396,7 +399,7 @@ export default function ProfileScreen() {
             <View style={styles.divider} />
             <InfoRow 
               icon="account-circle" 
-              label="የተጠቃሚ ስም" 
+              label="የተጠቃሚ ሚና" 
               value={user.username} 
               color="#f59e0b"
             />
@@ -413,13 +416,6 @@ export default function ProfileScreen() {
               label="ስልክ ቁጥር" 
               value={user.phone || 'አልተመዘገበም'} 
               color="#8b5cf6"
-            />
-            <View style={styles.divider} />
-            <InfoRow 
-              icon="shield-account" 
-              label="ሚና" 
-              value={user.role} 
-              color="#64748b"
             />
             <View style={styles.divider} />
             <InfoRow 
@@ -468,7 +464,7 @@ export default function ProfileScreen() {
               ንግድዎን በቀላሉ ለማስተዳደር፣ ምርቶችን ለመቆጣጠር እና 
               ሽያጮችን ለመከታተል የተዘጋጀ ነው።
             </Text>
-            <Text style={styles.versionText}>ስሪት 2.4.0</Text>
+            <Text style={styles.versionText}>ስሪት 1.0.0</Text>
           </LinearGradient>
         </View>
 
@@ -492,56 +488,27 @@ export default function ProfileScreen() {
             icon="phone"
             title="ስልክ ደውል"
             color="#10b981"
-            onPress={() => Linking.openURL('tel:+251911234567')}
+            onPress={() => Linking.openURL('tel:+251972989963')}
           />
           
           <MenuItem
             icon="email"
             title="ኢሜይል ላክ"
             color="#f59e0b"
-            onPress={() => Linking.openURL('mailto:info@autopartspro.com')}
+            onPress={() => Linking.openURL('mailto:envairnoha@gmail.com')}
           />
           
           <MenuItem
             icon="web"
             title="ድረ-ገጽ"
             color="#8b5cf6"
-            onPress={() => Linking.openURL('https://autopartspro.com')}
+            onPress={() => Linking.openURL('https://specificethiopia.com/inventory/')}
           />
           
-          <MenuItem
-            icon="share-variant"
-            title="አጋራ"
-            color="#2974ff"
-            onPress={handleShareApp}
-          />
+
+
         </View>
 
-        {/* Legal Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ህጋዊ መረጃ</Text>
-          
-          <MenuItem
-            icon="shield-account"
-            title="የግላዊነት ፖሊሲ"
-            color="#10b981"
-            onPress={() => Alert.alert('የግላዊነት ፖሊሲ', 'በሂደት ላይ')}
-          />
-          
-          <MenuItem
-            icon="file-document"
-            title="የአገልግሎት ውል"
-            color="#f59e0b"
-            onPress={() => Alert.alert('የአገልግሎት ውል', 'በሂደት ላይ')}
-          />
-          
-          <MenuItem
-            icon="information"
-            title="ስለ አፕሊኬሽኑ"
-            color="#8b5cf6"
-            onPress={() => Alert.alert('ስሪት 2.4.0', 'አውቶፓርትስ ፕሮ')}
-          />
-        </View>
 
         {/* Logout Button */}
         <TouchableOpacity 
@@ -608,78 +575,12 @@ export default function ProfileScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>ተይ</Text>
+                <Text style={styles.cancelButtonText}>ውጣ</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleUpdateProfile}
-              >
-                <Text style={styles.saveButtonText}>አስቀምጥ</Text>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal
-        visible={passwordModalVisible}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <LinearGradient
-            colors={['#1a2634', '#0f1623']}
-            style={styles.modalContent}
-          >
-            <Text style={styles.modalTitle}>የይለፍ ቃል ቀይር</Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              placeholder="የአሁኑ የይለፍ ቃል"
-              placeholderTextColor="#64748b"
-              secureTextEntry
-              value={passwordForm.current_password}
-              onChangeText={(text) => setPasswordForm({...passwordForm, current_password: text})}
-            />
-            
-            <TextInput
-              style={styles.modalInput}
-              placeholder="አዲስ የይለፍ ቃል"
-              placeholderTextColor="#64748b"
-              secureTextEntry
-              value={passwordForm.new_password}
-              onChangeText={(text) => setPasswordForm({...passwordForm, new_password: text})}
-            />
-            
-            <TextInput
-              style={styles.modalInput}
-              placeholder="አዲስ የይለፍ ቃል ድገም"
-              placeholderTextColor="#64748b"
-              secureTextEntry
-              value={passwordForm.confirm_password}
-              onChangeText={(text) => setPasswordForm({...passwordForm, confirm_password: text})}
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setPasswordModalVisible(false);
-                  setPasswordForm({
-                    current_password: '',
-                    new_password: '',
-                    confirm_password: '',
-                  });
-                }}
-              >
-                <Text style={styles.cancelButtonText}>ተይ</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleChangePassword}
               >
                 <Text style={styles.saveButtonText}>ቀይር</Text>
               </TouchableOpacity>
@@ -687,6 +588,115 @@ export default function ProfileScreen() {
           </LinearGradient>
         </View>
       </Modal>
+
+      {/* Change Password Modal */}
+    {/* Change Password Modal */}
+<Modal
+  visible={passwordModalVisible}
+  animationType="slide"
+  transparent={true}
+>
+  <View style={styles.modalContainer}>
+    <LinearGradient
+      colors={['#1a2634', '#0f1623']}
+      style={styles.modalContent}
+    >
+      <Text style={styles.modalTitle}>የይለፍ ቃል ቀይር</Text>
+      
+      {/* Current Password */}
+      <View style={styles.passwordInputContainer}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="የአሁኑ የይለፍ ቃል"
+          placeholderTextColor="#64748b"
+          secureTextEntry={!passwordForm.showCurrent}
+          value={passwordForm.current_password}
+          onChangeText={(text) => setPasswordForm({...passwordForm, current_password: text})}
+        />
+        <TouchableOpacity 
+          style={styles.eyeIcon}
+          onPress={() => setPasswordForm({...passwordForm, showCurrent: !passwordForm.showCurrent})}
+        >
+          <MaterialCommunityIcons 
+            name={passwordForm.showCurrent ? 'eye-off' : 'eye'} 
+            size={20} 
+            color="#64748b" 
+          />
+        </TouchableOpacity>
+      </View>
+      
+      {/* New Password */}
+      <View style={styles.passwordInputContainer}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="አዲስ የይለፍ ቃል"
+          placeholderTextColor="#64748b"
+          secureTextEntry={!passwordForm.showNew}
+          value={passwordForm.new_password}
+          onChangeText={(text) => setPasswordForm({...passwordForm, new_password: text})}
+        />
+        <TouchableOpacity 
+          style={styles.eyeIcon}
+          onPress={() => setPasswordForm({...passwordForm, showNew: !passwordForm.showNew})}
+        >
+          <MaterialCommunityIcons 
+            name={passwordForm.showNew ? 'eye-off' : 'eye'} 
+            size={20} 
+            color="#64748b" 
+          />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Confirm Password */}
+      <View style={styles.passwordInputContainer}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="አዲስ የይለፍ ቃል ድገም"
+          placeholderTextColor="#64748b"
+          secureTextEntry={!passwordForm.showConfirm}
+          value={passwordForm.confirm_password}
+          onChangeText={(text) => setPasswordForm({...passwordForm, confirm_password: text})}
+        />
+        <TouchableOpacity 
+          style={styles.eyeIcon}
+          onPress={() => setPasswordForm({...passwordForm, showConfirm: !passwordForm.showConfirm})}
+        >
+          <MaterialCommunityIcons 
+            name={passwordForm.showConfirm ? 'eye-off' : 'eye'} 
+            size={20} 
+            color="#64748b" 
+          />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.modalButtons}>
+        <TouchableOpacity
+          style={[styles.modalButton, styles.cancelButton]}
+          onPress={() => {
+            setPasswordModalVisible(false);
+            setPasswordForm({
+              current_password: '',
+              new_password: '',
+              confirm_password: '',
+              showCurrent: false,
+              showNew: false,
+              showConfirm: false,
+            });
+          }}
+        >
+          <Text style={styles.cancelButtonText}>ተይ</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.modalButton, styles.saveButton]}
+          onPress={handleChangePassword}
+        >
+          <Text style={styles.saveButtonText}>ቀይር</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
+  </View>
+</Modal>
     </LinearGradient>
   );
 }
@@ -783,6 +793,27 @@ const styles = StyleSheet.create({
   profileInfo: {
     flex: 1,
   },
+
+
+  passwordInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  borderRadius: 8,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+},
+passwordInput: {
+  flex: 1,
+  padding: 12,
+  color: '#ffffff',
+},
+eyeIcon: {
+  padding: 12,
+},
+
+
   profileFullName: {
     fontSize: 20,
     fontWeight: 'bold',
