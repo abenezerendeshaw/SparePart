@@ -858,21 +858,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
- 
-  warningContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  warningTitle: {
-    color: '#ff9800',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  warningDesc: {
-    color: '#ffb74d',
-    fontSize: 12,
-    marginTop: 2,
-  },
+
+
   section: {
     paddingHorizontal: 20,
     marginTop: 20,
@@ -1194,7 +1181,20 @@ warningBadgeText: {
   fontSize: 10,
   fontWeight: 'bold',
 },
-
+warningContent: {
+  flex: 1,
+},
+warningTitle: {
+  color: '#ff9800',
+  fontSize: 16,
+  fontWeight: 'bold',
+  marginBottom: 4,
+},
+warningDesc: {
+  color: '#94a3b8',
+  fontSize: 13,
+  marginBottom: 8,
+},
 warningProgressContainer: {
   flexDirection: 'row',
   alignItems: 'center',
@@ -1216,6 +1216,4 @@ warningProgressText: {
   fontSize: 11,
   fontWeight: '500',
 },
-
-
 });
