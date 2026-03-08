@@ -373,7 +373,7 @@ export default function RegisterScreen() {
             </Text>
 
             {/* Version */}
-            <Text style={styles.versionText}>ስሪት 2.4.0</Text>
+           
           </View>
         </ScrollView>
       </LinearGradient>

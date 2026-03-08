@@ -135,7 +135,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons 
-                name={focused ? "package" : "package-outline"} 
+                name={focused ? "package-variant-closed-plus" : "package-variant-closed-check"} 
                 size={22} 
                 color={color} 
               />
@@ -199,6 +199,7 @@ export default function TabLayout() {
        <Tabs.Screen name="products/add" options={{ headerShown: false, href: null }} />
        <Tabs.Screen name="sales/new" options={{ headerShown: false, href: null }} />
        <Tabs.Screen name="sales/[id]" options={{ headerShown: false, href: null }} />
+       <Tabs.Screen name="sales/receipt" options={{ headerShown: false, href: null }} />
        <Tabs.Screen name="products/[id]" options={{ headerShown: false, href: null }} />
 
 

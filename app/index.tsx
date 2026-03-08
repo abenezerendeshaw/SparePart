@@ -22,8 +22,8 @@ const { width, height } = Dimensions.get('window');
 const onboardingData = [
   {
     id: '1',
-    title: 'እንኳን ወደ አውቶፓርትስ ፕሮ በደህና መጡ',
-    subtitle: 'Welcome to AutoParts Pro',
+    title: 'እንኳን ወደ ስፔሲፊክ አውቶፓርትስ ፕሮ በደህና መጡ',
+    subtitle: 'Welcome to Specific AutoParts Pro',
     description: 'የእቃ ክምችትዎን በቀላሉ ያስተዳድሩ',
     icon: 'car-wrench',
     colors: ['#2974ff', '#1a4c9e'],
@@ -56,6 +56,17 @@ const onboardingData = [
     colors: ['#8b5cf6', '#6d28d9'],
     image: '📊',
   },
+
+{
+  id: '5',
+  title: 'ምርቶችዎን ያስተዋውቁ',
+  subtitle: 'Market Products',
+  description: 'ምርቶችን በ Specific Ethiopia መተግበሪያ ላይ ያስተዋውቁ',
+  icon: 'storefront',
+  colors: ['#8b5cf6', '#6d28d9'],
+  image: '🛍️',
+},
+
 ];
 
 export default function OnboardingScreen() {
@@ -326,7 +337,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 50,
   },
   imageContainer: {
     marginBottom: 40,
@@ -432,6 +443,7 @@ const styles = StyleSheet.create({
     bottom: 40,
     width: '100%',
     alignItems: 'center',
+    marginBottom:13
   },
   loginText: {
     color: '#64748b',

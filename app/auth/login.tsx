@@ -18,6 +18,8 @@ import {
 import api from '../lib/api';
 import storage from '../lib/storage';
 import React from 'react';
+import { Linking } from 'react-native';
+
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -245,20 +247,33 @@ else {
             </TouchableOpacity>
 
             {/* Footer Links */}
-            <View style={styles.footer}>
-              <TouchableOpacity onPress={() => Alert.alert('የግላዊነት', 'እስካሁን አልተዘጋጀም')}>
-                <Text style={styles.footerLink}>የግላዊነት መመሪያ</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Alert.alert('አገልግሎት', 'እስካሁን አልተዘጋጀም')}>
-                <Text style={styles.footerLink}>የአገልግሎት ውል</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Alert.alert('ድጋፍ', 'እስካሁን አልተዘጋጀም')}>
-                <Text style={styles.footerLink}>ድጋፍ</Text>
-              </TouchableOpacity>
-            </View>
+                 <View style={styles.footer}>
+                      <TouchableOpacity
+                        style={styles.socialBtn}
+                        onPress={() => Linking.openURL('https://t.me/specificautopart')}
+                      >
+                        <MaterialCommunityIcons name="near-me" size={22} color="#0088cc" />
+                        <Text style={styles.socialText}>Telegram</Text>
+                      </TouchableOpacity>
 
-            {/* Version */}
-            <Text style={styles.versionText}>ስሪት 2.4.0</Text>
+                      <TouchableOpacity
+                        style={styles.socialBtn}
+                        onPress={() => Linking.openURL('https://www.tiktok.com/@specificethiopia')}
+                      >
+                        <MaterialCommunityIcons name="music-note" size={22} color="#000" />
+                        <Text style={styles.socialText}>TikTok</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.socialBtn}
+                        onPress={() => Linking.openURL('https://facebook.com/specificethiopia')}
+                      >
+                        <MaterialCommunityIcons name="facebook" size={22} color="#1877F2" />
+                        <Text style={styles.socialText}>Facebook</Text>
+                      </TouchableOpacity>
+                    </View>
+
+        
           </View>
         </ScrollView>
       </LinearGradient>
@@ -313,6 +328,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(41, 116, 255, 0.1)',
     transform: [{ scale: 1.5 }],
   },
+
+
+
+
+
+
+
+socialBtn: {
+  padding: 10,
+},
+socialText: {
+  fontSize: 12,
+  marginTop: 4,
+  color: '#666',
+},
+
+
+
   welcomeContainer: {
     marginBottom: 30,
   },
