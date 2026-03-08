@@ -324,7 +324,7 @@ ${sale.items.map(item =>
         {/* Cashier Info */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="cashier" size={20} color="#10b981" />
+            <MaterialCommunityIcons name="emoticon-excited" size={20} color="#10b981" />
             <Text style={styles.sectionTitle}>የሸጠው ሰው</Text>
           </View>
           <View style={styles.cashierInfo}>

@@ -1,8 +1,8 @@
-import { StatusBar,ScrollView,View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator } from 'react-native';
+import { StatusBar, ScrollView, View, Text, StyleSheet, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import storage from '../lib/storage';
 import Animated, {
@@ -37,6 +37,8 @@ export default function ProductsScreen() {
   const [categories, setCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [deletedProducts, setDeletedProducts] = useState<Set<number>>(new Set());
 
   // Animation values
   const scrollY = useSharedValue(0);
@@ -45,6 +47,14 @@ export default function ProductsScreen() {
   const HEADER_MAX_HEIGHT = 120;
   const HEADER_MIN_HEIGHT = 70;
   const SCROLL_RANGE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Products screen focused - refreshing...');
+      fetchProducts();
+    }, [])
+  );
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -87,6 +97,8 @@ export default function ProductsScreen() {
         return;
       }
 
+      console.log('Fetching products...');
+      
       const api = axios.create({
         baseURL: 'https://specificethiopia.com/inventory/api/v1',
         headers: {
@@ -95,14 +107,29 @@ export default function ProductsScreen() {
         }
       });
 
-      const response = await api.get('/products?limit=100');
+      // Only fetch active products (not deleted)
+      const response = await api.get('/products?limit=100&status=active');
+      console.log('Products response:', response.data);
+      
       const productsData = response.data?.data?.products || [];
       
-      setProducts(productsData);
+      // Filter out any products with status 'deleted' or 'inactive'
+      const activeProducts = productsData.filter((p: Product) => 
+        p.status === 'active' || p.status === 'Active'
+      );
       
-      // Extract unique categories
-      const uniqueCategories = ['all', ...new Set(productsData.map((p: Product) => p.category).filter(Boolean))];
+      setProducts(activeProducts);
+      
+      // Extract unique categories from active products only
+      const uniqueCategories = ['all', ...new Set(
+        activeProducts
+          .map((p: Product) => p.category)
+          .filter(Boolean)
+      )];
       setCategories(uniqueCategories);
+
+      // Clear deleted products set when fetching new data
+      setDeletedProducts(new Set());
 
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -121,6 +148,11 @@ export default function ProductsScreen() {
   // Filter and sort products
   const filteredProducts = products
     .filter(product => {
+      // Don't show products that are marked as deleted in our local state
+      if (deletedProducts.has(product.id)) {
+        return false;
+      }
+      
       const matchesSearch = searchQuery === '' || 
         product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.product_code.toLowerCase().includes(searchQuery.toLowerCase());
@@ -145,7 +177,7 @@ export default function ProductsScreen() {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-  // Calculate stats
+  // Calculate stats from active products only
   const totalProducts = products.length;
   const totalStock = products.reduce((sum, p) => sum + (p.total_stock || 0), 0);
   const activeProducts = products.filter(p => p.status === 'active').length;
@@ -154,10 +186,11 @@ export default function ProductsScreen() {
   const ProductCard = ({ item }: { item: Product }) => {
     const isLowStock = (item.total_stock || 0) <= 10;
     const isOutOfStock = (item.total_stock || 0) === 0;
+    const isDeleting = deleteLoading === item.id;
 
     return (
       <TouchableOpacity 
-        style={styles.productCard}
+        style={[styles.productCard, isDeleting && styles.deletingCard]}
         onPress={() => router.push(`/(tab)/products/${item.id}`)}
         onLongPress={() => {
           Alert.alert(
@@ -171,6 +204,7 @@ export default function ProductsScreen() {
             ]
           );
         }}
+        disabled={isDeleting}
       >
         <LinearGradient
           colors={['rgba(41, 116, 255, 0.1)', 'rgba(15, 22, 35, 0.9)']}
@@ -232,6 +266,13 @@ export default function ProductsScreen() {
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#2974ff" />
           </View>
+          
+          {isDeleting && (
+            <View style={styles.deleteOverlay}>
+              <ActivityIndicator size="large" color="#ef4444" />
+              <Text style={styles.deleteOverlayText}>እየሰረዘ ነው...</Text>
+            </View>
+          )}
         </LinearGradient>
       </TouchableOpacity>
     );
@@ -240,7 +281,7 @@ export default function ProductsScreen() {
   const confirmDelete = (id: number) => {
     Alert.alert(
       'ምርት ሰርዝ',
-      'ይህን ምርት መሰረዝ እንደምትፈልግ እርግጠኛ ነህ?',
+      'ይህን ምርት መሰረዝ እንደምትፈልግ እርግጠኛ ነህ? ይህ ድርጊት ሊቀለበስ አይችልም።',
       [
         { text: 'ተይ', style: 'cancel' },
         { 
@@ -253,6 +294,8 @@ export default function ProductsScreen() {
   };
 
   const deleteProduct = async (id: number) => {
+    setDeleteLoading(id);
+    
     try {
       const token = await storage.getItem('authToken');
       const api = axios.create({
@@ -260,11 +303,53 @@ export default function ProductsScreen() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      await api.delete(`/products/${id}`);
-      Alert.alert('ተሳክቷል', 'ምርት ተሰርዟል');
-      fetchProducts(); // Refresh list
-    } catch (error) {
-      Alert.alert('ስህተት', 'ምርት መሰረዝ አልተሳካም');
+      console.log('Deleting product with ID:', id);
+      
+      // Try both formats
+      let response;
+      try {
+        // First try /:id format
+        response = await api.delete(`/products/${id}`);
+        console.log('Delete response (/:id):', response.data);
+      } catch (err) {
+        // If /:id fails, try ?id= format
+        console.log('Trying ?id= format...');
+        response = await api.delete(`/products?id=${id}`);
+        console.log('Delete response (?id=):', response.data);
+      }
+      
+      if (response.data && response.data.status === 'success') {
+        // Mark as deleted in local state immediately
+        setDeletedProducts(prev => new Set([...prev, id]));
+        
+        // Also filter it out from the products array
+        setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
+        
+        Alert.alert('ተሳክቷል', 'ምርት በተሳካ ሁኔታ ተሰርዟል');
+        
+        // Refresh from server after a short delay to ensure sync
+        setTimeout(() => {
+          fetchProducts();
+        }, 500);
+      } else {
+        throw new Error('Delete failed');
+      }
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      
+      let errorMessage = 'ምርት መሰረዝ አልተሳካም';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('ስህተት', errorMessage);
+      
+      // Remove loading state
+      setDeleteLoading(null);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -408,7 +493,7 @@ export default function ProductsScreen() {
               onPress={() => toggleSort('name')}
             >
               <MaterialCommunityIcons 
-                name="sort-alphabetical" 
+                name="sort-alphabetical-ascending" 
                 size={20} 
                 color={sortBy === 'name' ? '#2974ff' : '#64748b'} 
               />
@@ -623,6 +708,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+  },
+  deletingCard: {
+    opacity: 0.7,
   },
   cardGradient: {
     padding: 16,
@@ -701,6 +790,23 @@ const styles = StyleSheet.create({
   },
   emptyAddButtonText: {
     color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  deleteOverlayText: {
+    color: '#ef4444',
+    marginTop: 8,
     fontSize: 14,
     fontWeight: '600',
   },

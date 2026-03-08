@@ -37,7 +37,6 @@ interface Product {
   profit: number;
   supplier_id: string;
   location: string;
-  status: string;
   sync_status: string;
   last_sync_attempt: string;
   marketplace_product_id: string;
@@ -54,15 +53,18 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingField, setEditingField] = useState<{field: string; value: string; label: string} | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [activeTab, setActiveTab] = useState('details'); // 'details', 'stock', 'pricing'
+  const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
-    fetchProductDetails();
+    if (id) {
+      fetchProductDetails();
+    }
   }, [id]);
 
   const fetchProductDetails = async () => {
@@ -75,22 +77,44 @@ export default function ProductDetailScreen() {
 
       console.log('Fetching product with ID:', id);
       
-      // FIXED: Use query parameter format: ?id=51 instead of /51
-      const response = await api.get(`/products?id=${id}`);
+      // Try ?id= format first since it's working for delete
+      try {
+        const response = await api.get(`/products?id=${id}`);
+        console.log('API Response (?id= format):', response.data);
+        
+        if (response.data && response.data.status === 'success') {
+          setProduct(response.data.data);
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+      } catch (err) {
+        console.log('Failed with ?id= format, trying /:id format');
+      }
+      
+      // Fallback to /id format
+      const response = await api.get(`/products/${id}`);
+      console.log('API Response (/:id format):', response.data);
 
-      console.log('API Response:', response.data);
-
-      // Check the response structure from your API
-      if (response.data.status === 'success') {
+      if (response.data && response.data.status === 'success') {
         setProduct(response.data.data);
       } else {
-        Alert.alert('ስህተት', 'የምርት ዝርዝሮችን ማምጣት አልተሳካም');
+        throw new Error('Invalid response format');
       }
     } catch (error: any) {
       console.error('Error fetching product:', error);
       
       if (error.response?.status === 404) {
-        Alert.alert('ስህተት', 'ምርት አልተገኘም');
+        Alert.alert(
+          'ስህተት', 
+          'ምርት አልተገኘም',
+          [
+            { 
+              text: 'ወደ ምርቶች ተመለስ', 
+              onPress: () => router.back() 
+            }
+          ]
+        );
       } else if (error.response?.status === 401) {
         Alert.alert('ስህተት', 'እባክዎ እንደገና ይግቡ');
         router.replace('/auth/login');
@@ -134,7 +158,6 @@ export default function ProductDetailScreen() {
 
 📍 መገኛ: ${product.location || 'ያልተመዘገበ'}
 አቅራቢ: ${product.supplier_id || 'የለም'}
-ሁኔታ: ${product.status === 'active' ? 'ንቁ' : 'የተቋረጠ'}
 
 ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
       `;
@@ -149,8 +172,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
   };
 
   const handleDelete = async () => {
-    setShowDeleteModal(false);
-    setLoading(true);
+    setDeleteLoading(true);
     
     try {
       const token = await storage.getItem('authToken');
@@ -159,18 +181,40 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         return;
       }
 
-      // FIXED: Use query parameter format
+      console.log('Attempting to delete product with ID:', id);
+      
+      // Use ?id= format first since it's working
       const response = await api.delete(`/products?id=${id}`);
+      console.log('Delete response:', response.data);
 
-      if (response.data.status === 'success') {
-        Alert.alert('ተሳክቷል', 'ምርት በተሳካ ሁኔታ ተሰርዟል');
-        router.back();
+      if (response.data && response.data.status === 'success') {
+        Alert.alert(
+          'ተሳክቷል', 
+          'ምርት በተሳካ ሁኔታ ተሰርዟል',
+          [
+            { 
+              text: 'ወደ ምርቶች ተመለስ', 
+              onPress: () => router.back() 
+            }
+          ]
+        );
+      } else {
+        throw new Error('Delete failed');
       }
     } catch (error: any) {
       console.error('Error deleting product:', error);
-      Alert.alert('ስህተት', error.response?.data?.message || 'ምርት መሰረዝ አልተሳካም');
+      
+      let errorMessage = 'ምርት መሰረዝ አልተሳካም';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('ስህተት', errorMessage);
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -201,22 +245,34 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         updatedValue = Number(editValue) || 0;
       }
 
+      // Create update object with only the field being updated
       const updateData = {
-        [editingField.field]: updatedValue,
-        updated_at: new Date().toISOString(),
+        [editingField.field]: updatedValue
       };
 
-      // FIXED: Use query parameter format
+      console.log('Updating product with data:', updateData);
+      
+      // Use ?id= format first since it's working for delete
       const response = await api.put(`/products?id=${id}`, updateData);
+      console.log('Update response:', response.data);
 
-      if (response.data.status === 'success') {
-        // Refresh product details
+      if (response.data && response.data.status === 'success') {
         await fetchProductDetails();
         Alert.alert('ተሳክቷል', `${editingField.label} በተሳካ ሁኔታ ተሻሽሏል`);
+      } else {
+        throw new Error('Update failed');
       }
     } catch (error: any) {
       console.error('Error updating product:', error);
-      Alert.alert('ስህተት', error.response?.data?.message || 'ምርት ማሻሻል አልተሳካም');
+      
+      let errorMessage = 'ምርት ማሻሻል አልተሳካም';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('ስህተት', errorMessage);
     } finally {
       setLoading(false);
       setEditingField(null);
@@ -303,19 +359,24 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
           <TouchableOpacity
             style={[styles.headerButton, styles.deleteButton]}
             onPress={() => setShowDeleteModal(true)}
+            disabled={deleteLoading}
           >
-            <MaterialCommunityIcons name="delete" size={22} color="#ef4444" />
+            {deleteLoading ? (
+              <ActivityIndicator size="small" color="#ef4444" />
+            ) : (
+              <MaterialCommunityIcons name="delete" size={22} color="#ef4444" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Product Image/Icon */}
-      <View style={styles.imageContainer}>
+      {/* Product Icon */}
+      <View style={styles.iconCard}>
         <LinearGradient
           colors={['rgba(16, 185, 129, 0.2)', 'rgba(16, 185, 129, 0.05)']}
-          style={styles.imageGradient}
+          style={styles.iconGradient}
         >
-          <MaterialCommunityIcons name="package-variant" size={80} color="#10b981" />
+          <MaterialCommunityIcons name="package-variant" size={60} color="#10b981" />
         </LinearGradient>
       </View>
 
@@ -333,21 +394,6 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
             />
             <Text style={[styles.statusText, { color: stockStatus.color }]}>
               {stockStatus.text}
-            </Text>
-          </View>
-          
-          <View style={[styles.statusBadge, { 
-            backgroundColor: product.status === 'active' ? '#10b98120' : '#ef444420' 
-          }]}>
-            <MaterialCommunityIcons 
-              name={product.status === 'active' ? 'check-circle' : 'close-circle'} 
-              size={16} 
-              color={product.status === 'active' ? '#10b981' : '#ef4444'} 
-            />
-            <Text style={[styles.statusText, { 
-              color: product.status === 'active' ? '#10b981' : '#ef4444' 
-            }]}>
-              {product.status === 'active' ? 'ንቁ' : 'የተቋረጠ'}
             </Text>
           </View>
         </View>
@@ -622,13 +668,11 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
           </View>
         )}
 
-
-
-
-                {/* Footer with timestamps */}
+        {/* Footer with timestamps */}
         <View style={styles.footer}>
-  
           <Text style={styles.timestamp}>መለያ ቁጥር: {product.id}</Text>
+          <Text style={styles.timestamp}>የተፈጠረ: {formatDate(product.created_at)}</Text>
+          <Text style={styles.timestamp}>የተሻሻለ: {formatDate(product.updated_at)}</Text>
         </View>
 
       </ScrollView>
@@ -651,14 +695,20 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowDeleteModal(false)}
+                disabled={deleteLoading}
               >
                 <Text style={styles.cancelButtonText}>አይ, ይቅር</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmDeleteButton]}
                 onPress={handleDelete}
+                disabled={deleteLoading}
               >
-                <Text style={styles.confirmDeleteText}>አዎ, ሰርዝ</Text>
+                {deleteLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.confirmDeleteText}>አዎ, ሰርዝ</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -719,7 +769,6 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
   );
 }
 
-// Styles remain exactly the same as your original
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -788,11 +837,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  imageContainer: {
+  iconCard: {
     alignItems: 'center',
     marginBottom: 16,
+    paddingHorizontal: 20,
   },
-  imageGradient: {
+  iconGradient: {
     width: 100,
     height: 100,
     borderRadius: 50,
@@ -800,6 +850,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   basicInfoCard: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -1099,39 +1150,13 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    marginBottom:100,
+    marginBottom: 20,
     alignItems: 'center',
   },
   timestamp: {
     color: '#64748b',
     fontSize: 12,
     marginBottom: 4,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 80,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  editButton: {
-    backgroundColor: '#3b82f6',
-  },
-  stockButton: {
-    backgroundColor: '#f59e0b',
-  },
-  actionButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,

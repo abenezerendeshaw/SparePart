@@ -406,7 +406,7 @@ export default function Dashboard() {
       [
         { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251911234567') },
         { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:support@autoparts.com') },
-        { text: 'ተይ', style: 'cancel' }
+        { text: 'ውጣ', style: 'cancel' }
       ]
     );
   };
@@ -435,7 +435,7 @@ export default function Dashboard() {
           </View>
           <View style={styles.userDetails}>
             <Text style={styles.userFullName}>{userFullName}</Text>
-            <Text style={styles.userRole}>{userRole || 'ነጋዴ'}</Text>
+            <Text style={styles.userRole}>{userRole || 'እርሶ ነጋዴ ነዎት'}</Text>
             <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
               {formatDate(currentTime)}
             </Animated.Text>
@@ -685,8 +685,7 @@ export default function Dashboard() {
           <Text style={styles.supportText}>እገዛ እና ድጋፍ</Text>
         </TouchableOpacity>
 
-        {/* Version */}
-        <Text style={styles.versionText}>ስሪት 2.4.0</Text>
+       
         
         {/* Extra bottom padding for better scrolling */}
         <View style={{ height: 100 }} />
@@ -704,7 +703,7 @@ export default function Dashboard() {
                 { text: 'ምርት ጨምር', onPress: () => router.push('/(tab)/products/add') },
                 { text: 'አዲስ ሽያጭ', onPress: () => router.push('/(tab)/sales/new') },
                 { text: 'እገዛ', onPress: handleContactSupport },
-                { text: 'ተይ', style: 'cancel' }
+                { text: 'ውጣ', style: 'cancel' }
               ]
             );
           }}

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
@@ -38,28 +38,26 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: 30, // Moved up 30px from bottom (was 0, then 20, now 30)
+          bottom: 30,
           left: 16,
           right: 16,
           height: 65,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
-          borderRadius: 10, // Changed to 6
+          borderRadius: 10,
           marginHorizontal: 10,
-          // Glowing effect shadow
           shadowColor: '#2974ff',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.5,
           shadowRadius: 15,
-          elevation: 15, // For Android
-          // Additional glow layers
+          elevation: 15,
           borderWidth: 1,
           borderColor: 'rgba(41, 116, 255, 0.3)',
         },
+
         tabBarBackground: () => (
           <>
-            {/* Outer glow layer */}
             <View
               style={[
                 StyleSheet.absoluteFill,
@@ -71,10 +69,10 @@ export default function TabLayout() {
                 },
               ]}
             />
-            {/* Inner background with blur */}
-            <BlurView 
-              intensity={95} 
-              tint="dark" 
+
+            <BlurView
+              intensity={95}
+              tint="dark"
               style={[StyleSheet.absoluteFill, { borderRadius: 6, overflow: 'hidden' }]}
             >
               <LinearGradient
@@ -82,7 +80,7 @@ export default function TabLayout() {
                 style={[StyleSheet.absoluteFill, { borderRadius: 6 }]}
               />
             </BlurView>
-            {/* Inner border glow */}
+
             <View
               style={[
                 StyleSheet.absoluteFill,
@@ -96,17 +94,22 @@ export default function TabLayout() {
             />
           </>
         ),
+
         tabBarActiveTintColor: '#2974ff',
         tabBarInactiveTintColor: '#64748b',
+
         tabBarShowLabel: true,
+
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
           marginBottom: 8,
         },
+
         tabBarIconStyle: {
           marginTop: 8,
         },
+
         tabBarItemStyle: {
           paddingVertical: 5,
         },
@@ -116,12 +119,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'ዋና',
+          tabBarLabel: 'ዋና',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons 
-                name={focused ? "view-dashboard" : "view-dashboard-outline"} 
-                size={22} 
-                color={color} 
+              <MaterialCommunityIcons
+                name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
+                size={22}
+                color={color}
               />
             </View>
           ),
@@ -132,12 +136,13 @@ export default function TabLayout() {
         name="products"
         options={{
           title: 'ምርቶች',
+          tabBarLabel: 'ምርቶች',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons 
-                name={focused ? "package-variant-closed-plus" : "package-variant-closed-check"} 
-                size={22} 
-                color={color} 
+              <MaterialCommunityIcons
+                name={focused ? 'package-variant-closed-plus' : 'package-variant-closed-check'}
+                size={22}
+                color={color}
               />
             </View>
           ),
@@ -148,12 +153,13 @@ export default function TabLayout() {
         name="sales"
         options={{
           title: 'ሽያጭ',
+          tabBarLabel: 'ሽያጭ',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons 
-                name={focused ? "cart" : "cart-outline"} 
-                size={22} 
-                color={color} 
+              <MaterialCommunityIcons
+                name={focused ? 'bank-check' : 'bank-transfer'}
+                size={22}
+                color={color}
               />
             </View>
           ),
@@ -164,64 +170,58 @@ export default function TabLayout() {
         name="inventory"
         options={{
           title: 'ክምችት',
+          tabBarLabel: 'ክምችት',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons 
-                name={focused ? "warehouse" : "warehouse"} 
-                size={22} 
-                color={color} 
+              <MaterialCommunityIcons
+                name="warehouse"
+                size={22}
+                color={color}
               />
             </View>
           ),
         }}
       />
-
-
-      
 
       <Tabs.Screen
         name="profile"
         options={{
           title: 'መገለጫ',
+          tabBarLabel: 'መገለጫ',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons 
-                name={focused ? "account-circle" : "account-circle-outline"} 
-                size={22} 
-                color={color} 
+              <MaterialCommunityIcons
+                name={focused ? 'account-circle' : 'account-circle-outline'}
+                size={22}
+                color={color}
               />
             </View>
           ),
         }}
       />
 
-
-       <Tabs.Screen name="products/add" options={{ headerShown: false, href: null }} />
-       <Tabs.Screen name="sales/new" options={{ headerShown: false, href: null }} />
-       <Tabs.Screen name="sales/[id]" options={{ headerShown: false, href: null }} />
-       <Tabs.Screen name="sales/receipt" options={{ headerShown: false, href: null }} />
-       <Tabs.Screen name="products/[id]" options={{ headerShown: false, href: null }} />
-
+      <Tabs.Screen name="products/add" options={{ headerShown: false, href: null }} />
+      <Tabs.Screen name="sales/new" options={{ headerShown: false, href: null }} />
+      <Tabs.Screen name="sales/[id]" options={{ headerShown: false, href: null }} />
+      <Tabs.Screen name="sales/receipt" options={{ headerShown: false, href: null }} />
+      <Tabs.Screen name="products/[id]" options={{ headerShown: false, href: null }} />
 
     </Tabs>
-    
   );
 }
-
-
 
 const styles = StyleSheet.create({
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 6, // Changed to 6 to match tab bar
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 2,
   },
+
   activeIconContainer: {
     backgroundColor: 'rgba(41, 116, 255, 0.15)',
-    // Inner glow for active icon
     shadowColor: '#2974ff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
