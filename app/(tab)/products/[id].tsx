@@ -763,6 +763,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
               </TouchableOpacity>
             </View>
           </View>
+             <View style={{ height: 100 }} />
         </View>
       </Modal>
     </LinearGradient>

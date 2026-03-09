@@ -404,8 +404,8 @@ export default function Dashboard() {
       'እገዛ እና ድጋፍ',
       'እንዴት ልንረዳዎ እንችላለን?',
       [
-        { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251911234567') },
-        { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:support@autoparts.com') },
+        { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251972989963') },
+        { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
         { text: 'ውጣ', style: 'cancel' }
       ]
     );

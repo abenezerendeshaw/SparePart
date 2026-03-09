@@ -90,14 +90,23 @@ export default function AddProductScreen() {
     return true;
   };
 
+  // const calculateProfit = () => {
+  //   const buying = Number(form.buying_price) || 0;
+  //   const selling = Number(form.selling_price) || 0;
+  //   return (selling - buying).toString();
+  // };
+
   const calculateProfit = () => {
-    const buying = Number(form.buying_price) || 0;
-    const selling = Number(form.selling_price) || 0;
-    return (selling - buying).toString();
-  };
+  const buying = Number(form.buying_price) || 0;
+  const selling = Number(form.selling_price) || 0;
+  return (selling - buying).toFixed(2);
+};
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+    
+
+
 
     setLoading(true);
     try {
@@ -379,62 +388,75 @@ export default function AddProductScreen() {
             ))}
 
             {/* Pricing Section */}
-            {renderSection('pricing', 'ዋጋ', 'currency-usd', (
-              <>
-                {/* Price Row */}
-                <View style={styles.row}>
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>የግዢ ዋጋ</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.buying_price}
-                        onChangeText={(value) => {
-                          handleInputChange('buying_price', value);
-                          handleInputChange('profit', calculateProfit());
-                        }}
-                      />
-                    </View>
-                  </View>
+{renderSection('pricing', 'ዋጋ', 'currency-usd', (
+  <>
+    {/* Price Row */}
+    <View style={styles.row}>
+      <View style={[styles.inputWrapper, styles.halfWidth]}>
+        <Text style={styles.label}>የግዢ ዋጋ</Text>
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="0.00"
+            placeholderTextColor="#64748b"
+            keyboardType="numeric"
+            value={form.buying_price}
+            onChangeText={(value) => {
+              // First update the buying price
+              setForm(prev => ({
+                ...prev,
+                buying_price: value,
+                // Then calculate profit using the new value and current selling price
+                profit: ((Number(value) || 0) - (Number(prev.selling_price) || 0)).toString()
+              }));
+            }}
+          />
+        </View>
+      </View>
 
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>የሽያጭ ዋጋ *</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.selling_price}
-                        onChangeText={(value) => {
-                          handleInputChange('selling_price', value);
-                          handleInputChange('profit', calculateProfit());
-                        }}
-                      />
-                    </View>
-                  </View>
-                </View>
+      <View style={[styles.inputWrapper, styles.halfWidth]}>
+        <Text style={styles.label}>የሽያጭ ዋጋ *</Text>
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="0.00"
+            placeholderTextColor="#64748b"
+            keyboardType="numeric"
+            value={form.selling_price}
+            onChangeText={(value) => {
+              // First update the selling price
+              setForm(prev => ({
+                ...prev,
+                selling_price: value,
+                // Then calculate profit using the new value and current buying price
+                profit: ((Number(value) || 0) - (Number(prev.buying_price) || 0)).toString()
+              }));
+            }}
+          />
+        </View>
+      </View>
+    </View>
 
-                {/* Profit Display */}
-                {form.buying_price && form.selling_price && (
-                  <View style={styles.profitContainer}>
-                    <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
-                    <Text style={styles.profitText}>
-                      ትርፍ: {calculateProfit()} ብር
-                    </Text>
-                    <Text style={styles.profitPercent}>
-                      ({((Number(form.selling_price) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)}%)
-                    </Text>
-                  </View>
-                )}
-              </>
-            ))}
+    {/* Profit Display */}
+    {(form.buying_price || form.selling_price) && (
+      <View style={styles.profitContainer}>
+        <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
+        <Text style={styles.profitText}>
+          ትርፍ: {calculateProfit()} ብር
+        </Text>
+        <Text style={styles.profitPercent}>
+          ({Number(form.buying_price) > 0 
+            ? ((Number(form.selling_price || 0) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)
+            : '0.0'}%)
+        </Text>
+      </View>
+    )}
+  </>
+))}
 
+  
             {/* Stock Management Section */}
             {renderSection('stock', 'ክምችት አስተዳደር', 'package-variant', (
               <>
