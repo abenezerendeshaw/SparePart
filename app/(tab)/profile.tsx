@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import storage from '../lib/storage';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface UserData {
   id: number;
@@ -44,6 +45,7 @@ interface ApiResponse {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -55,14 +57,14 @@ export default function ProfileScreen() {
     phone: '',
     email: '',
   });
-const [passwordForm, setPasswordForm] = useState({
-  current_password: '',
-  new_password: '',
-  confirm_password: '',
-  showCurrent: false,
-  showNew: false,
-  showConfirm: false,
-});
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+    showCurrent: false,
+    showNew: false,
+    showConfirm: false,
+  });
 
   useEffect(() => {
     loadUserProfile();
@@ -79,7 +81,6 @@ const [passwordForm, setPasswordForm] = useState({
 
       console.log('Fetching user profile with token:', token.substring(0, 20) + '...');
       
-      // Create axios instance with token (just like in Products screen)
       const api = axios.create({
         baseURL: 'https://specificethiopia.com/inventory/api/v1',
         headers: {
@@ -110,17 +111,17 @@ const [passwordForm, setPasswordForm] = useState({
         console.log('Error Status:', error.response.status);
         
         if (error.response.status === 401) {
-          Alert.alert('ስህተት', 'እባክዎ እንደገና ይግቡ');
+          Alert.alert(t('error'), t('loginRequired', 'common'));
           router.replace('/auth/login');
         } else {
-          Alert.alert('ስህተት', 'የተጠቃሚ መረጃ መጫን አልተቻለም');
+          Alert.alert(t('error'), t('profileLoadFailed', 'profile'));
         }
       } else if (error.request) {
         console.log('No response received');
-        Alert.alert('ስህተት', 'ከአገልጋይ ጋር መገናኘት አልተቻለም');
+        Alert.alert(t('error'), t('connectionError', 'common'));
       } else {
         console.log('Error Message:', error.message);
-        Alert.alert('ስህተት', 'ያልተጠበቀ ስህተት ተከስቷል');
+        Alert.alert(t('error'), t('unexpectedError', 'common'));
       }
     } finally {
       setLoading(false);
@@ -161,13 +162,13 @@ const [passwordForm, setPasswordForm] = useState({
       const response = await api.put('/user', updateData);
       
       if (response.data.status === 'success') {
-        Alert.alert('ተሳክቷል', 'መረጃዎ ተሻሽሏል');
+        Alert.alert(t('success'), t('profileUpdated', 'profile'));
         await loadUserProfile();
         setEditModalVisible(false);
       }
     } catch (error: any) {
       console.log('Update error:', error.response?.data || error.message);
-      Alert.alert('ስህተት', error.response?.data?.message || 'መረጃ ማሻሻል አልተቻለም');
+      Alert.alert(t('error'), error.response?.data?.message || t('profileUpdateFailed', 'profile'));
     } finally {
       setLoading(false);
     }
@@ -175,12 +176,12 @@ const [passwordForm, setPasswordForm] = useState({
 
   const handleChangePassword = async () => {
     if (passwordForm.new_password.length < 6) {
-      Alert.alert('ስህተት', 'የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት');
+      Alert.alert(t('error'), t('passwordLength', 'profile'));
       return;
     }
     
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      Alert.alert('ስህተት', 'የይለፍ ቃላት አይዛመዱም');
+      Alert.alert(t('error'), t('passwordMismatch', 'profile'));
       return;
     }
 
@@ -204,17 +205,20 @@ const [passwordForm, setPasswordForm] = useState({
       });
       
       if (response.data.status === 'success') {
-        Alert.alert('ተሳክቷል', 'የይለፍ ቃልዎ ተቀይሯል');
+        Alert.alert(t('success'), t('passwordChanged', 'profile'));
         setPasswordModalVisible(false);
         setPasswordForm({
           current_password: '',
           new_password: '',
           confirm_password: '',
+          showCurrent: false,
+          showNew: false,
+          showConfirm: false,
         });
       }
     } catch (error: any) {
       console.log('Password change error:', error.response?.data || error.message);
-      Alert.alert('ስህተት', error.response?.data?.message || 'የይለፍ ቃል መቀየር አልተቻለም');
+      Alert.alert(t('error'), error.response?.data?.message || t('passwordChangeFailed', 'profile'));
     } finally {
       setLoading(false);
     }
@@ -222,12 +226,12 @@ const [passwordForm, setPasswordForm] = useState({
 
   const handleLogout = () => {
     Alert.alert(
-      'ዘግተህ መውጣት',
-      'መውጣት እንደምትፈልግ እርግጠኛ ነህ?',
+      t('logout', 'profile'),
+      t('logoutConfirm', 'profile'),
       [
-        { text: 'ተይ', style: 'cancel' },
+        { text: t('cancel', 'common'), style: 'cancel' },
         {
-          text: 'ውጣ',
+          text: t('logout', 'profile'),
           style: 'destructive',
           onPress: async () => {
             setLoggingOut(true);
@@ -235,7 +239,7 @@ const [passwordForm, setPasswordForm] = useState({
               await storage.removeItem('authToken');
               router.replace('/auth/login');
             } catch (error) {
-              Alert.alert('ስህተት', 'ዘግተህ መውጣት አልተሳካም');
+              Alert.alert(t('error'), t('logoutFailed', 'profile'));
             } finally {
               setLoggingOut(false);
             }
@@ -247,25 +251,25 @@ const [passwordForm, setPasswordForm] = useState({
 
   const handleContactUs = () => {
     Alert.alert(
-      'ያግኙን',
-      'እንዴት ልንረዳዎ እንችላለን?',
+      t('contactUs', 'profile'),
+      t('contactMessage', 'profile'),
       [
-        { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251911234567') },
-        { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:info@autopartspro.com') },
-        { text: 'ተይ', style: 'cancel' }
+        { text: t('call', 'common'), onPress: () => Linking.openURL('tel:+251972989963') },
+        { text: t('email', 'common'), onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
+        { text: t('cancel', 'common'), style: 'cancel' }
       ]
     );
   };
 
   const handleShareApp = () => {
     Share.share({
-      message: 'አውቶፓርትስ ፕሮ - የእቃ ክምችት አስተዳደር አፕሊኬሽን\nአሁኑኑ ያውርዱ!',
+      message: t('shareMessage', 'profile'),
     });
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'አይታወቅም';
-    return new Date(dateString).toLocaleDateString('am-ET', {
+    if (!dateString) return t('unknown', 'common');
+    return new Date(dateString).toLocaleDateString(language === 'am' ? 'am-ET' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -273,8 +277,8 @@ const [passwordForm, setPasswordForm] = useState({
   };
 
   const formatDateTime = (dateString: string) => {
-    if (!dateString) return 'አይታወቅም';
-    return new Date(dateString).toLocaleString('am-ET', {
+    if (!dateString) return t('unknown', 'common');
+    return new Date(dateString).toLocaleString(language === 'am' ? 'am-ET' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -306,7 +310,7 @@ const [passwordForm, setPasswordForm] = useState({
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2974ff" />
-          <Text style={styles.loadingText}>በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -316,9 +320,9 @@ const [passwordForm, setPasswordForm] = useState({
     return (
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>የተጠቃሚ መረጃ አልተገኘም</Text>
+          <Text style={styles.loadingText}>{t('userNotFound', 'profile')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadUserProfile}>
-            <Text style={styles.retryButtonText}>እንደገና ሞክር</Text>
+            <Text style={styles.retryButtonText}>{t('retry', 'common')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -349,7 +353,7 @@ const [passwordForm, setPasswordForm] = useState({
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>መገለጫ</Text>
+          <Text style={styles.headerTitle}>{t('profile', 'navigation')}</Text>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => setEditModalVisible(true)}
@@ -378,7 +382,7 @@ const [passwordForm, setPasswordForm] = useState({
           
           <View style={styles.profileInfo}>
             <Text style={styles.profileFullName}>{user.full_name}</Text>
-            <Text style={styles.profileUsername}>{user.sync_status}</Text>
+            <Text style={styles.profileUsername}>{user.username}</Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>{user.role}</Text>
             </View>
@@ -387,47 +391,47 @@ const [passwordForm, setPasswordForm] = useState({
 
         {/* Personal Information Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>የግል መረጃ</Text>
+          <Text style={styles.sectionTitle}>{t('personalInfo', 'profile')}</Text>
           
           <View style={styles.infoCard}>
             <InfoRow 
               icon="account" 
-              label="ሙሉ ስም" 
+              label={t('fullName', 'profile')} 
               value={user.full_name} 
               color="#2974ff"
             />
             <View style={styles.divider} />
             <InfoRow 
               icon="account-circle" 
-              label="የተጠቃሚ ሚና" 
+              label={t('username', 'profile')} 
               value={user.username} 
               color="#f59e0b"
             />
             <View style={styles.divider} />
             <InfoRow 
               icon="email" 
-              label="ኢሜይል" 
+              label={t('email', 'common')} 
               value={user.email} 
               color="#10b981"
             />
             <View style={styles.divider} />
             <InfoRow 
               icon="phone" 
-              label="ስልክ ቁጥር" 
-              value={user.phone || 'አልተመዘገበም'} 
+              label={t('phone', 'common')} 
+              value={user.phone || t('notRegistered', 'profile')} 
               color="#8b5cf6"
             />
             <View style={styles.divider} />
             <InfoRow 
               icon="calendar" 
-              label="የተቀላቀሉበት ቀን" 
+              label={t('joinedDate', 'profile')} 
               value={formatDate(user.created_at)} 
               color="#64748b"
             />
             <View style={styles.divider} />
             <InfoRow 
               icon="clock-outline" 
-              label="መጨረሻ ግባት" 
+              label={t('lastLogin', 'profile')} 
               value={formatDateTime(user.last_login)} 
               color="#64748b"
             />
@@ -446,35 +450,33 @@ const [passwordForm, setPasswordForm] = useState({
               styles.syncStatusText,
               { color: user.sync_status === 'synced' ? '#10b981' : '#f59e0b' }
             ]}>
-              {user.sync_status === 'synced' ? 'የተመሳሰለ' : 'በማመሳሰል ላይ'}
+              {user.sync_status === 'synced' ? t('synced', 'profile') : t('syncing', 'profile')}
             </Text>
           </View>
         )}
 
         {/* About Us Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ስለ እኛ</Text>
+          <Text style={styles.sectionTitle}>{t('aboutUs', 'profile')}</Text>
           
           <LinearGradient
             colors={['rgba(41, 116, 255, 0.1)', 'rgba(15, 22, 35, 0.9)']}
             style={styles.aboutCard}
           >
             <Text style={styles.aboutText}>
-              አውቶፓርትስ ፕሮ የእቃ ክምችት አስተዳደር ሲስተም ነው። 
-              ንግድዎን በቀላሉ ለማስተዳደር፣ ምርቶችን ለመቆጣጠር እና 
-              ሽያጮችን ለመከታተል የተዘጋጀ ነው።
+              {t('aboutText', 'profile')}
             </Text>
-            <Text style={styles.versionText}>ስሪት 1.0.0</Text>
+            <Text style={styles.versionText}>{t('version', 'profile')} 1.0.0</Text>
           </LinearGradient>
         </View>
 
         {/* Account Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>የመለያ ቅንብሮች</Text>
+          <Text style={styles.sectionTitle}>{t('accountSettings', 'profile')}</Text>
           
           <MenuItem
             icon="lock"
-            title="የይለፍ ቃል ቀይር"
+            title={t('changePassword', 'profile')}
             color="#10b981"
             onPress={() => setPasswordModalVisible(true)}
           />
@@ -482,33 +484,29 @@ const [passwordForm, setPasswordForm] = useState({
 
         {/* Contact & Support */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ያግኙን</Text>
+          <Text style={styles.sectionTitle}>{t('contactSupport', 'profile')}</Text>
           
           <MenuItem
             icon="phone"
-            title="ስልክ ደውል"
+            title={t('call', 'common')}
             color="#10b981"
             onPress={() => Linking.openURL('tel:+251972989963')}
           />
           
           <MenuItem
             icon="email"
-            title="ኢሜይል ላክ"
+            title={t('email', 'common')}
             color="#f59e0b"
             onPress={() => Linking.openURL('mailto:envairnoha@gmail.com')}
           />
           
           <MenuItem
             icon="web"
-            title="ድረ-ገጽ"
+            title={t('website', 'common')}
             color="#8b5cf6"
             onPress={() => Linking.openURL('https://specificethiopia.com/inventory/')}
           />
-          
-
-
         </View>
-
 
         {/* Logout Button */}
         <TouchableOpacity 
@@ -521,7 +519,7 @@ const [passwordForm, setPasswordForm] = useState({
           ) : (
             <>
               <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
-              <Text style={styles.logoutText}>ዘግተህ ውጣ</Text>
+              <Text style={styles.logoutText}>{t('logout', 'profile')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -541,11 +539,11 @@ const [passwordForm, setPasswordForm] = useState({
             colors={['#1a2634', '#0f1623']}
             style={styles.modalContent}
           >
-            <Text style={styles.modalTitle}>መረጃ አርትዕ</Text>
+            <Text style={styles.modalTitle}>{t('editInfo', 'profile')}</Text>
             
             <TextInput
               style={styles.modalInput}
-              placeholder="ሙሉ ስም"
+              placeholder={t('fullName', 'profile')}
               placeholderTextColor="#64748b"
               value={editForm.full_name}
               onChangeText={(text) => setEditForm({...editForm, full_name: text})}
@@ -553,7 +551,7 @@ const [passwordForm, setPasswordForm] = useState({
             
             <TextInput
               style={styles.modalInput}
-              placeholder="ስልክ ቁጥር"
+              placeholder={t('phone', 'common')}
               placeholderTextColor="#64748b"
               value={editForm.phone}
               onChangeText={(text) => setEditForm({...editForm, phone: text})}
@@ -562,7 +560,7 @@ const [passwordForm, setPasswordForm] = useState({
             
             <TextInput
               style={styles.modalInput}
-              placeholder="ኢሜይል"
+              placeholder={t('email', 'common')}
               placeholderTextColor="#64748b"
               value={editForm.email}
               onChangeText={(text) => setEditForm({...editForm, email: text})}
@@ -575,14 +573,14 @@ const [passwordForm, setPasswordForm] = useState({
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>ውጣ</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleUpdateProfile}
               >
-                <Text style={styles.saveButtonText}>ቀይር</Text>
+                <Text style={styles.saveButtonText}>{t('save', 'common')}</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -590,113 +588,112 @@ const [passwordForm, setPasswordForm] = useState({
       </Modal>
 
       {/* Change Password Modal */}
-    {/* Change Password Modal */}
-<Modal
-  visible={passwordModalVisible}
-  animationType="slide"
-  transparent={true}
->
-  <View style={styles.modalContainer}>
-    <LinearGradient
-      colors={['#1a2634', '#0f1623']}
-      style={styles.modalContent}
-    >
-      <Text style={styles.modalTitle}>የይለፍ ቃል ቀይር</Text>
-      
-      {/* Current Password */}
-      <View style={styles.passwordInputContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="የአሁኑ የይለፍ ቃል"
-          placeholderTextColor="#64748b"
-          secureTextEntry={!passwordForm.showCurrent}
-          value={passwordForm.current_password}
-          onChangeText={(text) => setPasswordForm({...passwordForm, current_password: text})}
-        />
-        <TouchableOpacity 
-          style={styles.eyeIcon}
-          onPress={() => setPasswordForm({...passwordForm, showCurrent: !passwordForm.showCurrent})}
-        >
-          <MaterialCommunityIcons 
-            name={passwordForm.showCurrent ? 'eye-off' : 'eye'} 
-            size={20} 
-            color="#64748b" 
-          />
-        </TouchableOpacity>
-      </View>
-      
-      {/* New Password */}
-      <View style={styles.passwordInputContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="አዲስ የይለፍ ቃል"
-          placeholderTextColor="#64748b"
-          secureTextEntry={!passwordForm.showNew}
-          value={passwordForm.new_password}
-          onChangeText={(text) => setPasswordForm({...passwordForm, new_password: text})}
-        />
-        <TouchableOpacity 
-          style={styles.eyeIcon}
-          onPress={() => setPasswordForm({...passwordForm, showNew: !passwordForm.showNew})}
-        >
-          <MaterialCommunityIcons 
-            name={passwordForm.showNew ? 'eye-off' : 'eye'} 
-            size={20} 
-            color="#64748b" 
-          />
-        </TouchableOpacity>
-      </View>
-      
-      {/* Confirm Password */}
-      <View style={styles.passwordInputContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="አዲስ የይለፍ ቃል ድገም"
-          placeholderTextColor="#64748b"
-          secureTextEntry={!passwordForm.showConfirm}
-          value={passwordForm.confirm_password}
-          onChangeText={(text) => setPasswordForm({...passwordForm, confirm_password: text})}
-        />
-        <TouchableOpacity 
-          style={styles.eyeIcon}
-          onPress={() => setPasswordForm({...passwordForm, showConfirm: !passwordForm.showConfirm})}
-        >
-          <MaterialCommunityIcons 
-            name={passwordForm.showConfirm ? 'eye-off' : 'eye'} 
-            size={20} 
-            color="#64748b" 
-          />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.modalButtons}>
-        <TouchableOpacity
-          style={[styles.modalButton, styles.cancelButton]}
-          onPress={() => {
-            setPasswordModalVisible(false);
-            setPasswordForm({
-              current_password: '',
-              new_password: '',
-              confirm_password: '',
-              showCurrent: false,
-              showNew: false,
-              showConfirm: false,
-            });
-          }}
-        >
-          <Text style={styles.cancelButtonText}>ተይ</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.modalButton, styles.saveButton]}
-          onPress={handleChangePassword}
-        >
-          <Text style={styles.saveButtonText}>ቀይር</Text>
-        </TouchableOpacity>
-      </View>
-    </LinearGradient>
-  </View>
-</Modal>
+      <Modal
+        visible={passwordModalVisible}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalContainer}>
+          <LinearGradient
+            colors={['#1a2634', '#0f1623']}
+            style={styles.modalContent}
+          >
+            <Text style={styles.modalTitle}>{t('changePassword', 'profile')}</Text>
+            
+            {/* Current Password */}
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={t('currentPassword', 'profile')}
+                placeholderTextColor="#64748b"
+                secureTextEntry={!passwordForm.showCurrent}
+                value={passwordForm.current_password}
+                onChangeText={(text) => setPasswordForm({...passwordForm, current_password: text})}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setPasswordForm({...passwordForm, showCurrent: !passwordForm.showCurrent})}
+              >
+                <MaterialCommunityIcons 
+                  name={passwordForm.showCurrent ? 'eye-off' : 'eye'} 
+                  size={20} 
+                  color="#64748b" 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            {/* New Password */}
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={t('newPassword', 'profile')}
+                placeholderTextColor="#64748b"
+                secureTextEntry={!passwordForm.showNew}
+                value={passwordForm.new_password}
+                onChangeText={(text) => setPasswordForm({...passwordForm, new_password: text})}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setPasswordForm({...passwordForm, showNew: !passwordForm.showNew})}
+              >
+                <MaterialCommunityIcons 
+                  name={passwordForm.showNew ? 'eye-off' : 'eye'} 
+                  size={20} 
+                  color="#64748b" 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Confirm Password */}
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={t('confirmPassword', 'profile')}
+                placeholderTextColor="#64748b"
+                secureTextEntry={!passwordForm.showConfirm}
+                value={passwordForm.confirm_password}
+                onChangeText={(text) => setPasswordForm({...passwordForm, confirm_password: text})}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setPasswordForm({...passwordForm, showConfirm: !passwordForm.showConfirm})}
+              >
+                <MaterialCommunityIcons 
+                  name={passwordForm.showConfirm ? 'eye-off' : 'eye'} 
+                  size={20} 
+                  color="#64748b" 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setPasswordModalVisible(false);
+                  setPasswordForm({
+                    current_password: '',
+                    new_password: '',
+                    confirm_password: '',
+                    showCurrent: false,
+                    showNew: false,
+                    showConfirm: false,
+                  });
+                }}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleChangePassword}
+              >
+                <Text style={styles.saveButtonText}>{t('save', 'common')}</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -793,27 +790,23 @@ const styles = StyleSheet.create({
   profileInfo: {
     flex: 1,
   },
-
-
   passwordInputContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderRadius: 8,
-  marginBottom: 12,
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-},
-passwordInput: {
-  flex: 1,
-  padding: 12,
-  color: '#ffffff',
-},
-eyeIcon: {
-  padding: 12,
-},
-
-
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 12,
+    color: '#ffffff',
+  },
+  eyeIcon: {
+    padding: 12,
+  },
   profileFullName: {
     fontSize: 20,
     fontWeight: 'bold',

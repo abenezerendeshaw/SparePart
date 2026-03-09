@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
+import { useLanguage } from '../../../context/LanguageContext';
 
 interface SaleItem {
   id: number;
@@ -52,6 +53,7 @@ interface Sale {
 export default function SaleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sale, setSale] = useState<Sale | null>(null);
@@ -71,7 +73,6 @@ export default function SaleDetailScreen() {
 
       console.log('Fetching sale with ID:', id);
       
-      // FIXED: Use query parameter format: ?id=51 instead of /51
       const response = await api.get(`/sales?id=${id}`);
 
       console.log('API Response:', response.data);
@@ -79,18 +80,18 @@ export default function SaleDetailScreen() {
       if (response.data.status === 'success') {
         setSale(response.data.data);
       } else {
-        Alert.alert('ስህተት', 'የሽያጭ ዝርዝሮችን ማምጣት አልተሳካም');
+        Alert.alert(t('error'), t('saleFetchFailed', 'sales'));
       }
     } catch (error: any) {
       console.error('Error fetching sale:', error);
       
       if (error.response?.status === 404) {
-        Alert.alert('ስህተት', 'ሽያጭ አልተገኘም');
+        Alert.alert(t('error'), t('saleNotFound', 'sales'));
       } else if (error.response?.status === 401) {
-        Alert.alert('ስህተት', 'እባክዎ እንደገና ይግቡ');
+        Alert.alert(t('error'), t('loginRequired', 'common'));
         router.replace('/auth/login');
       } else {
-        Alert.alert('ስህተት', error.response?.data?.message || 'የሽያጭ ዝርዝሮችን ማምጣት አልተሳካም');
+        Alert.alert(t('error'), error.response?.data?.message || t('saleFetchFailed', 'sales'));
       }
     } finally {
       setLoading(false);
@@ -108,27 +109,27 @@ export default function SaleDetailScreen() {
     
     try {
       const shareMessage = `
-ሽያጭ ደረሰኝ
-ሽያጭ ኮድ: ${sale.sale_code}
-ደንበኛ: ${sale.customer_name}
-ቀን: ${sale.sale_date} ${sale.sale_time}
+${t('receipt', 'sales')}
+${t('saleCode', 'sales')}: ${sale.sale_code}
+${t('customer', 'sales')}: ${sale.customer_name}
+${t('date', 'common')}: ${sale.sale_date} ${sale.sale_time}
 
-ምርቶች:
+${t('items', 'sales')}:
 ${sale.items.map(item => 
-  `${item.product_name} - ${item.quantity} x ${item.unit_price} = ${item.total_price} ብር`
+  `${item.product_name} - ${item.quantity} x ${item.unit_price} ${t('currency', 'common')} = ${item.total_price} ${t('currency', 'common')}`
 ).join('\n')}
 
-አጠቃላይ: ${sale.total_amount} ብር
-ቅናሽ: ${sale.discount} ብር
-ድምር ደምር: ${sale.grand_total} ብር
-የተከፈለ: ${sale.paid_amount} ብር
-የቀረ: ${sale.due_amount} ብር
-ክፍያ ሁኔታ: ${sale.payment_status === 'paid' ? 'ተከፍሏል' : sale.payment_status === 'partial' ? 'በከፊል ተከፍሏል' : 'አልተከፈለም'}
+${t('total', 'sales')}: ${sale.total_amount} ${t('currency', 'common')}
+${t('discount', 'sales')}: ${sale.discount} ${t('currency', 'common')}
+${t('grandTotal', 'sales')}: ${sale.grand_total} ${t('currency', 'common')}
+${t('paid', 'common')}: ${sale.paid_amount} ${t('currency', 'common')}
+${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
+${t('paymentStatus', 'sales')}: ${getStatusText(sale.payment_status)}
       `;
 
       await Share.share({
         message: shareMessage,
-        title: 'ሽያጭ ደረሰኝ',
+        title: t('receipt', 'sales'),
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -146,16 +147,15 @@ ${sale.items.map(item =>
         return;
       }
 
-      // FIXED: Use query parameter format
       const response = await api.delete(`/sales?id=${id}`);
 
       if (response.data.status === 'success') {
-        Alert.alert('ተሳክቷል', 'ሽያጭ በተሳካ ሁኔታ ተሰርዟል');
+        Alert.alert(t('success'), t('saleDeleted', 'sales'));
         router.back();
       }
     } catch (error: any) {
       console.error('Error deleting sale:', error);
-      Alert.alert('ስህተት', error.response?.data?.message || 'ሽያጭ መሰረዝ አልተሳካም');
+      Alert.alert(t('error'), error.response?.data?.message || t('saleDeleteFailed', 'sales'));
     } finally {
       setLoading(false);
     }
@@ -177,11 +177,11 @@ ${sale.items.map(item =>
   const getStatusText = (status: string) => {
     switch (status) {
       case 'paid':
-        return 'ተከፍሏል';
+        return t('paid', 'common');
       case 'partial':
-        return 'በከፊል ተከፍሏል';
+        return t('partial', 'sales');
       case 'pending':
-        return 'አልተከፈለም';
+        return t('pending', 'sales');
       default:
         return status;
     }
@@ -190,13 +190,13 @@ ${sale.items.map(item =>
   const getPaymentMethodText = (method: string) => {
     switch (method) {
       case 'cash':
-        return 'ጥሬ ገንዘብ';
+        return t('cash', 'sales');
       case 'card':
-        return 'ካርድ';
+        return t('card', 'sales');
       case 'transfer':
-        return 'ዝውውር';
+        return t('transfer', 'sales');
       case 'other':
-        return 'ሌላ';
+        return t('other', 'common');
       default:
         return method;
     }
@@ -223,7 +223,7 @@ ${sale.items.map(item =>
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -235,9 +235,9 @@ ${sale.items.map(item =>
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={64} color="#ef4444" />
-          <Text style={styles.errorText}>ሽያጭ አልተገኘም</Text>
+          <Text style={styles.errorText}>{t('saleNotFound', 'sales')}</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>ተመለስ</Text>
+            <Text style={styles.backButtonText}>{t('back', 'common')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -256,7 +256,7 @@ ${sale.items.map(item =>
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>የሽያጭ ዝርዝሮች</Text>
+        <Text style={styles.headerTitle}>{t('saleDetails', 'sales')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerButton}
@@ -283,7 +283,7 @@ ${sale.items.map(item =>
         <View style={styles.codeCard}>
           <View style={styles.codeHeader}>
             <MaterialCommunityIcons name="barcode" size={24} color="#10b981" />
-            <Text style={styles.codeLabel}>ሽያጭ ኮድ</Text>
+            <Text style={styles.codeLabel}>{t('saleCode', 'sales')}</Text>
           </View>
           <Text style={styles.codeValue}>{sale.sale_code}</Text>
           <View style={styles.dateTime}>
@@ -302,7 +302,7 @@ ${sale.items.map(item =>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="account" size={20} color="#10b981" />
-            <Text style={styles.sectionTitle}>የደንበኛ መረጃ</Text>
+            <Text style={styles.sectionTitle}>{t('customerInfo', 'sales')}</Text>
           </View>
           <View style={styles.customerInfo}>
             <Text style={styles.customerName}>{sale.customer_name}</Text>
@@ -325,11 +325,11 @@ ${sale.items.map(item =>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="emoticon-excited" size={20} color="#10b981" />
-            <Text style={styles.sectionTitle}>የሸጠው ሰው</Text>
+            <Text style={styles.sectionTitle}>{t('cashier', 'sales')}</Text>
           </View>
           <View style={styles.cashierInfo}>
             <MaterialCommunityIcons name="account-tie" size={20} color="#64748b" />
-            <Text style={styles.cashierName}>{sale.cashier_name || 'Unknown'}</Text>
+            <Text style={styles.cashierName}>{sale.cashier_name || t('unknown', 'common')}</Text>
           </View>
         </View>
 
@@ -337,7 +337,7 @@ ${sale.items.map(item =>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="package-variant" size={20} color="#10b981" />
-            <Text style={styles.sectionTitle}>ምርቶች</Text>
+            <Text style={styles.sectionTitle}>{t('items', 'sales')}</Text>
             <View style={styles.itemCount}>
               <Text style={styles.itemCountText}>{sale.items.length}</Text>
             </View>
@@ -350,8 +350,8 @@ ${sale.items.map(item =>
                 <Text style={styles.itemQuantity}>x{item.quantity}</Text>
               </View>
               <View style={styles.itemDetails}>
-                <Text style={styles.itemUnitPrice}>{item.unit_price} ብር እያንዳንዱ</Text>
-                <Text style={styles.itemTotalPrice}>{item.total_price} ብር</Text>
+                <Text style={styles.itemUnitPrice}>{item.unit_price} {t('currency', 'common')} {t('each', 'sales')}</Text>
+                <Text style={styles.itemTotalPrice}>{item.total_price} {t('currency', 'common')}</Text>
               </View>
             </View>
           ))}
@@ -361,36 +361,36 @@ ${sale.items.map(item =>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="cash" size={20} color="#10b981" />
-            <Text style={styles.sectionTitle}>የክፍያ ማጠቃለያ</Text>
+            <Text style={styles.sectionTitle}>{t('paymentSummary', 'sales')}</Text>
           </View>
           
           <View style={styles.paymentSummary}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>አጠቃላይ መጠን</Text>
-              <Text style={styles.summaryValue}>{sale.total_amount} ብር</Text>
+              <Text style={styles.summaryLabel}>{t('total', 'sales')}</Text>
+              <Text style={styles.summaryValue}>{sale.total_amount} {t('currency', 'common')}</Text>
             </View>
             
             {sale.discount > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>ቅናሽ</Text>
-                <Text style={styles.summaryDiscount}>-{sale.discount} ብር</Text>
+                <Text style={styles.summaryLabel}>{t('discount', 'sales')}</Text>
+                <Text style={styles.summaryDiscount}>-{sale.discount} {t('currency', 'common')}</Text>
               </View>
             )}
             
             <View style={[styles.summaryRow, styles.grandTotalRow]}>
-              <Text style={styles.grandTotalLabel}>ድምር ደምር</Text>
-              <Text style={styles.grandTotalValue}>{sale.grand_total} ብር</Text>
+              <Text style={styles.grandTotalLabel}>{t('grandTotal', 'sales')}</Text>
+              <Text style={styles.grandTotalValue}>{sale.grand_total} {t('currency', 'common')}</Text>
             </View>
             
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>የተከፈለ</Text>
-              <Text style={styles.summaryPaid}>{sale.paid_amount} ብር</Text>
+              <Text style={styles.summaryLabel}>{t('paid', 'common')}</Text>
+              <Text style={styles.summaryPaid}>{sale.paid_amount} {t('currency', 'common')}</Text>
             </View>
             
             {sale.due_amount > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>የቀረ</Text>
-                <Text style={styles.summaryDue}>{sale.due_amount} ብር</Text>
+                <Text style={styles.summaryLabel}>{t('due', 'common')}</Text>
+                <Text style={styles.summaryDue}>{sale.due_amount} {t('currency', 'common')}</Text>
               </View>
             )}
             
@@ -421,45 +421,42 @@ ${sale.items.map(item =>
 
             {sale.notes ? (
               <View style={styles.notes}>
-                <Text style={styles.notesLabel}>ማስታወሻ:</Text>
+                <Text style={styles.notesLabel}>{t('notes', 'sales')}:</Text>
                 <Text style={styles.notesText}>{sale.notes}</Text>
               </View>
             ) : null}
           </View>
         </View>
 
-        {/* Profit Info (Optional - maybe hide for customers) */}
+        {/* Profit Info */}
         <View style={[styles.section, styles.profitSection]}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
-            <Text style={styles.sectionTitle}>ትርፍ</Text>
+            <Text style={styles.sectionTitle}>{t('profit', 'sales')}</Text>
           </View>
-          <Text style={styles.profitValue}>{sale.profit} ብር</Text>
+          <Text style={styles.profitValue}>{sale.profit} {t('currency', 'common')}</Text>
         </View>
 
         {/* Action Buttons */}
-
-{/* Action Buttons */}
-<View style={styles.actionButtons}>
-  <TouchableOpacity 
-    style={[styles.actionButton, styles.printButton]}
-    onPress={() => router.push(`/sales/receipt?id=${sale.id}`)} // Fixed: use query param
-  >
-    <MaterialCommunityIcons name="file-document-outline" size={20} color="#ffffff" />
-    <Text style={styles.actionButtonText}>ደረሰኝ አትም</Text>
-  </TouchableOpacity>
-  
-  {sale.due_amount > 0 && (
-    <TouchableOpacity 
-      style={[styles.actionButton, styles.paymentButton]}
-      onPress={() => router.push(`/sales/payment/${sale.id}`)}
-    >
-      <MaterialCommunityIcons name="cash-plus" size={20} color="#ffffff" />
-      <Text style={styles.actionButtonText}>ክፍያ መዝግብ</Text>
-    </TouchableOpacity>
-  )}
-</View>
-
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.printButton]}
+            onPress={() => router.push(`/sales/receipt?id=${sale.id}`)}
+          >
+            <MaterialCommunityIcons name="file-document-outline" size={20} color="#ffffff" />
+            <Text style={styles.actionButtonText}>{t('printReceipt', 'sales')}</Text>
+          </TouchableOpacity>
+          
+          {sale.due_amount > 0 && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.paymentButton]}
+              onPress={() => router.push(`/sales/payment/${sale.id}`)}
+            >
+              <MaterialCommunityIcons name="cash-plus" size={20} color="#ffffff" />
+              <Text style={styles.actionButtonText}>{t('recordPayment', 'sales')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
 
       {/* Delete Confirmation Modal */}
@@ -472,22 +469,22 @@ ${sale.items.map(item =>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>ሽያጭ ሰርዝ?</Text>
+            <Text style={styles.modalTitle}>{t('deleteSale', 'sales')}?</Text>
             <Text style={styles.modalText}>
-              ይህን ሽያጭ መሰረዝ ይፈልጋሉ? ይህ ድርጊት ሊቀለበስ አይችልም።
+              {t('deleteConfirm', 'sales')}
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowDeleteModal(false)}
               >
-                <Text style={styles.cancelButtonText}>አይ, ይቅር</Text>
+                <Text style={styles.cancelButtonText}>{t('no', 'common')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmDeleteButton]}
                 onPress={handleDelete}
               >
-                <Text style={styles.confirmDeleteText}>አዎ, ሰርዝ</Text>
+                <Text style={styles.confirmDeleteText}>{t('yes', 'common')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -13,6 +13,7 @@ import Animated, {
   Extrapolate,
   withSpring,
 } from 'react-native-reanimated';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,7 @@ interface SalesStats {
 
 export default function SalesScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,7 +138,7 @@ export default function SalesScreen() {
 
     } catch (error) {
       console.error('Error fetching sales:', error);
-      Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
+      Alert.alert(t('error'), t('dataLoadFailed', 'common'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -217,13 +219,6 @@ export default function SalesScreen() {
 
     // Ensure item_count is treated as a number
     const itemCount = Number(item.item_count) || 0;
-    
-    // Get appropriate Amharic word for items
-    const getItemText = (count: number) => {
-      if (count === 1) return 'እቃ';
-      if (count >= 2 && count <= 10) return 'እቃዎች';
-      return 'እቃዎች';
-    };
 
     return (
       <TouchableOpacity 
@@ -231,12 +226,12 @@ export default function SalesScreen() {
         onPress={() => router.push(`/(tab)/sales/${item.id}`)}
         onLongPress={() => {
           Alert.alert(
-            'የሽያጭ አማራጮች',
+            t('saleOptions', 'sales'),
             item.sale_code,
             [
-              { text: 'ዝርዝር ተመልከት', onPress: () => router.push(`/(tab)/sales/${item.id}`) },
-              { text: 'ደረሰኝ አትም', onPress: () => handlePrintReceipt(item) },
-              { text: 'ተይ', style: 'cancel' }
+              { text: t('viewDetails', 'common'), onPress: () => router.push(`/(tab)/sales/${item.id}`) },
+              { text: t('printReceipt', 'sales'), onPress: () => handlePrintReceipt(item) },
+              { text: t('cancel', 'common'), style: 'cancel' }
             ]
           );
         }}
@@ -264,7 +259,7 @@ export default function SalesScreen() {
                 styles.statusText,
                 { color: isDue ? '#ef4444' : isPaid ? '#10b981' : '#f59e0b' }
               ]}>
-                {isDue ? 'ዕዳ' : isPaid ? 'ተከፍሏል' : 'በሂደት ላይ'}
+                {isDue ? t('due', 'common') : isPaid ? t('paid', 'common') : t('pending', 'sales')}
               </Text>
             </View>
           </View>
@@ -284,7 +279,7 @@ export default function SalesScreen() {
             <View style={styles.detailItem}>
               <MaterialCommunityIcons name="package-variant" size={14} color="#64748b" />
               <Text style={styles.detailText}>
-                {itemCount} {getItemText(itemCount)}
+                {itemCount} {itemCount === 1 ? t('item', 'sales') : t('items', 'sales')}
               </Text>
             </View>
 
@@ -295,7 +290,7 @@ export default function SalesScreen() {
                 color="#10b981" 
               />
               <Text style={styles.detailText}>
-                {item.payment_method === 'cash' ? 'ጥሬ' : 'ካርድ'}
+                {item.payment_method === 'cash' ? t('cash', 'sales') : t('card', 'sales')}
               </Text>
             </View>
 
@@ -303,7 +298,7 @@ export default function SalesScreen() {
               <View style={styles.detailItem}>
                 <MaterialCommunityIcons name="alert" size={14} color="#ef4444" />
                 <Text style={[styles.detailText, { color: '#ef4444' }]}>
-                  ቀሪ: ETB {Number(item.due_amount).toLocaleString()}
+                  {t('due', 'common')}: {t('currency', 'common')} {Number(item.due_amount).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -311,17 +306,17 @@ export default function SalesScreen() {
 
           <View style={styles.cardFooter}>
             <View>
-              <Text style={styles.totalLabel}>ድምር</Text>
-              <Text style={styles.totalAmount}>ETB {Number(item.grand_total).toLocaleString()}</Text>
+              <Text style={styles.totalLabel}>{t('total', 'sales')}</Text>
+              <Text style={styles.totalAmount}>{t('currency', 'common')} {Number(item.grand_total).toLocaleString()}</Text>
             </View>
             <View style={styles.profitBadge}>
-              <Text style={styles.profitText}>ትርፍ: ETB {Number(item.profit).toLocaleString()}</Text>
+              <Text style={styles.profitText}>{t('profit', 'sales')}: {t('currency', 'common')} {Number(item.profit).toLocaleString()}</Text>
             </View>
           </View>
 
           {isToday && (
             <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>ዛሬ</Text>
+              <Text style={styles.todayBadgeText}>{t('today', 'common')}</Text>
             </View>
           )}
         </LinearGradient>
@@ -330,7 +325,7 @@ export default function SalesScreen() {
   };
 
   const handlePrintReceipt = (sale: Sale) => {
-    Alert.alert('ደረሰኝ', `የ${sale.sale_code} ደረሰኝ በሂደት ላይ`);
+    Alert.alert(t('receipt', 'sales'), t('receiptComingSoon', 'sales'));
   };
 
   const handleNewSale = () => {
@@ -353,7 +348,7 @@ export default function SalesScreen() {
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f59e0b" />
-          <Text style={styles.loadingText}>ሽያጮች በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -371,7 +366,7 @@ export default function SalesScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>ሽያጮች</Text>
+        <Text style={styles.headerTitle}>{t('sales', 'navigation')}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleNewSale}
@@ -400,7 +395,7 @@ export default function SalesScreen() {
             <MaterialCommunityIcons name="magnify" size={20} color="#64748b" />
             <TextInput
               style={styles.searchInput}
-              placeholder="ሽያጭ ፈልግ..."
+              placeholder={t('searchSale', 'sales')}
               placeholderTextColor="#64748b"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -420,8 +415,8 @@ export default function SalesScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statValue}>{stats.todaySales}</Text>
-            <Text style={styles.statLabel}>የዛሬ ሽያጭ</Text>
-            <Text style={styles.statSubValue}>ETB {stats.todayRevenue.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('todaySales', 'dashboard')}</Text>
+            <Text style={styles.statSubValue}>{t('currency', 'common')} {stats.todayRevenue.toLocaleString()}</Text>
           </LinearGradient>
 
           <LinearGradient
@@ -429,24 +424,24 @@ export default function SalesScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statValue}>{stats.totalSales}</Text>
-            <Text style={styles.statLabel}>አጠቃላይ ሽያጭ</Text>
-            <Text style={styles.statSubValue}>ETB {stats.totalRevenue.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('totalSales', 'sales')}</Text>
+            <Text style={styles.statSubValue}>{t('currency', 'common')} {stats.totalRevenue.toLocaleString()}</Text>
           </LinearGradient>
 
           <LinearGradient
             colors={['#8b5cf6', '#6d28d9']}
             style={styles.statCard}
           >
-            <Text style={styles.statValue}>ETB {stats.totalProfit.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>አጠቃላይ ትርፍ</Text>
+            <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
           </LinearGradient>
 
           <LinearGradient
             colors={['#2974ff', '#1a4c9e']}
             style={styles.statCard}
           >
-            <Text style={styles.statValue}>ETB {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
-            <Text style={styles.statLabel}>አማካይ ሽያጭ</Text>
+            <Text style={styles.statValue}>{t('currency', 'common')} {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
           </LinearGradient>
         </View>
 
@@ -454,19 +449,19 @@ export default function SalesScreen() {
         <View style={styles.paymentStats}>
           <View style={styles.paymentStatItem}>
             <MaterialCommunityIcons name="cash" size={20} color="#10b981" />
-            <Text style={styles.paymentStatLabel}>ጥሬ</Text>
+            <Text style={styles.paymentStatLabel}>{t('cash', 'sales')}</Text>
             <Text style={styles.paymentStatValue}>{stats.cashSales}</Text>
           </View>
           <View style={styles.paymentStatDivider} />
           <View style={styles.paymentStatItem}>
             <MaterialCommunityIcons name="credit-card" size={20} color="#f59e0b" />
-            <Text style={styles.paymentStatLabel}>ካርድ</Text>
+            <Text style={styles.paymentStatLabel}>{t('card', 'sales')}</Text>
             <Text style={styles.paymentStatValue}>{stats.creditSales}</Text>
           </View>
           <View style={styles.paymentStatDivider} />
           <View style={styles.paymentStatItem}>
             <MaterialCommunityIcons name="alert-circle" size={20} color="#ef4444" />
-            <Text style={styles.paymentStatLabel}>ዕዳ</Text>
+            <Text style={styles.paymentStatLabel}>{t('due', 'common')}</Text>
             <Text style={styles.paymentStatValue}>
               {sales.filter(s => s.payment_status === 'due').length}
             </Text>
@@ -477,32 +472,32 @@ export default function SalesScreen() {
         <View style={styles.filterSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <FilterChip
-              label="ሁሉም"
+              label={t('all', 'common')}
               isActive={selectedFilter === 'all'}
               onPress={() => setSelectedFilter('all')}
             />
             <FilterChip
-              label="ዛሬ"
+              label={t('today', 'common')}
               isActive={selectedFilter === 'today'}
               onPress={() => setSelectedFilter('today')}
             />
             <FilterChip
-              label="ሳምንት"
+              label={t('week', 'common')}
               isActive={selectedFilter === 'week'}
               onPress={() => setSelectedFilter('week')}
             />
             <FilterChip
-              label="ወር"
+              label={t('month', 'common')}
               isActive={selectedFilter === 'month'}
               onPress={() => setSelectedFilter('month')}
             />
             <FilterChip
-              label="ተከፍሏል"
+              label={t('paid', 'common')}
               isActive={selectedFilter === 'paid'}
               onPress={() => setSelectedFilter('paid')}
             />
             <FilterChip
-              label="ዕዳ"
+              label={t('due', 'common')}
               isActive={selectedFilter === 'due'}
               onPress={() => setSelectedFilter('due')}
             />
@@ -514,7 +509,7 @@ export default function SalesScreen() {
               onPress={() => setSelectedPayment('all')}
             >
               <Text style={[styles.paymentFilterText, selectedPayment === 'all' && styles.activePaymentFilterText]}>
-                ሁሉም
+                {t('all', 'common')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -523,7 +518,7 @@ export default function SalesScreen() {
             >
               <MaterialCommunityIcons name="cash" size={14} color={selectedPayment === 'cash' ? '#ffffff' : '#64748b'} />
               <Text style={[styles.paymentFilterText, selectedPayment === 'cash' && styles.activePaymentFilterText]}>
-                ጥሬ
+                {t('cash', 'sales')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -532,7 +527,7 @@ export default function SalesScreen() {
             >
               <MaterialCommunityIcons name="credit-card" size={14} color={selectedPayment === 'credit' ? '#ffffff' : '#64748b'} />
               <Text style={[styles.paymentFilterText, selectedPayment === 'credit' && styles.activePaymentFilterText]}>
-                ካርድ
+                {t('card', 'sales')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -541,18 +536,18 @@ export default function SalesScreen() {
         {/* Sales List */}
         <View style={styles.salesList}>
           <Text style={styles.listTitle}>
-            {filteredSales.length} ሽያጮች ተገኝተዋል
+            {filteredSales.length} {t('salesFound', 'sales')}
           </Text>
 
           {filteredSales.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="cart-off" size={48} color="#475569" />
-              <Text style={styles.emptyText}>ምንም ሽያጮች አልተገኙም</Text>
+              <Text style={styles.emptyText}>{t('noSales', 'sales')}</Text>
               <TouchableOpacity 
                 style={styles.emptyAddButton}
                 onPress={handleNewSale}
               >
-                <Text style={styles.emptyAddButtonText}>አዲስ ሽያጭ መዝግብ</Text>
+                <Text style={styles.emptyAddButtonText}>{t('newSale', 'sales')}</Text>
               </TouchableOpacity>
             </View>
           ) : (

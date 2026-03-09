@@ -18,16 +18,12 @@ import {
 } from 'react-native';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
-
-interface Section {
-  title: string;
-  icon: string;
-  fields: string[];
-  expanded: boolean;
-}
+import { useLanguage } from '../../../context/LanguageContext';
+import LanguageSwitcher from '../../../components/LanguageSwitcher';
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -76,38 +72,29 @@ export default function AddProductScreen() {
 
   const validateForm = () => {
     if (!form.product_name.trim()) {
-      Alert.alert('ስህተት', 'የምርት ስም ያስፈልጋል');
+      Alert.alert(t('error'), t('productNameRequired', 'addProduct'));
       return false;
     }
     if (!form.product_code.trim()) {
-      Alert.alert('ስህተት', 'የምርት ኮድ ያስፈልጋል');
+      Alert.alert(t('error'), t('productCodeRequired', 'addProduct'));
       return false;
     }
     if (!form.selling_price || Number(form.selling_price) <= 0) {
-      Alert.alert('ስህተት', 'ትክክለኛ የሽያጭ ዋጋ ያስገቡ');
+      Alert.alert(t('error'), t('validSellingPrice', 'addProduct'));
       return false;
     }
     return true;
   };
 
-  // const calculateProfit = () => {
-  //   const buying = Number(form.buying_price) || 0;
-  //   const selling = Number(form.selling_price) || 0;
-  //   return (selling - buying).toString();
-  // };
-
   const calculateProfit = () => {
-  const buying = Number(form.buying_price) || 0;
-  const selling = Number(form.selling_price) || 0;
-  return (selling - buying).toFixed(2);
-};
+    const buying = Number(form.buying_price) || 0;
+    const selling = Number(form.selling_price) || 0;
+    return (selling - buying).toFixed(2);
+  };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
     
-
-
-
     setLoading(true);
     try {
       const token = await storage.getItem('authToken');
@@ -140,15 +127,15 @@ export default function AddProductScreen() {
 
       if (response.data.status === 'success') {
         Alert.alert(
-          'ተሳክቷል',
-          'ምርት በተሳካ ሁኔታ ተጨምሯል',
+          t('success'),
+          t('successMessage', 'addProduct'),
           [
             {
-              text: 'ወደ ምርቶች ይሂዱ',
+              text: t('goToProducts', 'addProduct'),
               onPress: () => router.push('/(tab)/products'),
             },
             {
-              text: 'ሌላ ጨምር',
+              text: t('addAnother', 'addProduct'),
               onPress: () => {
                 setForm({
                   product_name: '',
@@ -181,11 +168,11 @@ export default function AddProductScreen() {
           ]
         );
       } else {
-        Alert.alert('ስህተት', response.data.message || 'ምርት መጨመር አልተሳካም');
+        Alert.alert(t('error'), response.data.message || t('error'));
       }
     } catch (error: any) {
       console.log('Error adding product:', error);
-      Alert.alert('ስህተት', error.response?.data?.message || 'እባክዎ እንደገና ይሞክሩ');
+      Alert.alert(t('error'), error.response?.data?.message || t('error'));
     } finally {
       setLoading(false);
     }
@@ -251,8 +238,8 @@ export default function AddProductScreen() {
             >
               <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>አዲስ ምርት ጨምር</Text>
-            <View style={{ width: 44 }} />
+            <Text style={styles.headerTitle}>{t('title', 'addProduct')}</Text>
+            <LanguageSwitcher />
           </View>
 
           {/* Progress Indicator */}
@@ -285,16 +272,16 @@ export default function AddProductScreen() {
           {/* Form */}
           <View style={styles.form}>
             {/* Basic Information Section */}
-            {renderSection('basic', 'መሰረታዊ መረጃ', 'information', (
+            {renderSection('basic', t('basicInfo', 'addProduct'), 'information', (
               <>
                 {/* Product Name */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>የምርት ስም *</Text>
+                  <Text style={styles.label}>{t('productName', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="tag-outline" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="ለምሳሌ: ብሬክ ፓድ"
+                      placeholder={t('productNamePlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.product_name}
                       onChangeText={(value) => handleInputChange('product_name', value)}
@@ -304,12 +291,12 @@ export default function AddProductScreen() {
 
                 {/* Product Code */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>የምርት ኮድ *</Text>
+                  <Text style={styles.label}>{t('productCode', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="barcode" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="BP-001"
+                      placeholder={t('productCodePlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.product_code}
                       onChangeText={(value) => handleInputChange('product_code', value)}
@@ -319,12 +306,12 @@ export default function AddProductScreen() {
 
                 {/* Category */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>ምድብ</Text>
+                  <Text style={styles.label}>{t('category', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="shape-outline" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="ለምሳሌ: ብሬክ ሲስተም"
+                      placeholder={t('categoryPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.category}
                       onChangeText={(value) => handleInputChange('category', value)}
@@ -335,16 +322,16 @@ export default function AddProductScreen() {
             ))}
 
             {/* Details Section */}
-            {renderSection('details', 'ዝርዝር መረጃ', 'text-box', (
+            {renderSection('details', t('details', 'addProduct'), 'text-box', (
               <>
                 {/* Brand */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>ብራንድ</Text>
+                  <Text style={styles.label}>{t('brand', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="trademark" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="ለምሳሌ: Bosch"
+                      placeholder={t('brandPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.brand}
                       onChangeText={(value) => handleInputChange('brand', value)}
@@ -354,12 +341,12 @@ export default function AddProductScreen() {
 
                 {/* Description */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>መግለጫ</Text>
+                  <Text style={styles.label}>{t('description', 'addProduct')}</Text>
                   <View style={[styles.inputContainer, styles.textAreaContainer]}>
                     <MaterialCommunityIcons name="text-box-outline" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, styles.textArea]}
-                      placeholder="ስለ ምርቱ ዝርዝር መረጃ..."
+                      placeholder={t('descriptionPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       multiline
                       numberOfLines={4}
@@ -372,12 +359,12 @@ export default function AddProductScreen() {
 
                 {/* Unit */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>መለኪያ</Text>
+                  <Text style={styles.label}>{t('unit', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="scale" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="pcs"
+                      placeholder={t('unitPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.unit}
                       onChangeText={(value) => handleInputChange('unit', value)}
@@ -388,81 +375,76 @@ export default function AddProductScreen() {
             ))}
 
             {/* Pricing Section */}
-{renderSection('pricing', 'ዋጋ', 'currency-usd', (
-  <>
-    {/* Price Row */}
-    <View style={styles.row}>
-      <View style={[styles.inputWrapper, styles.halfWidth]}>
-        <Text style={styles.label}>የግዢ ዋጋ</Text>
-        <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="0.00"
-            placeholderTextColor="#64748b"
-            keyboardType="numeric"
-            value={form.buying_price}
-            onChangeText={(value) => {
-              // First update the buying price
-              setForm(prev => ({
-                ...prev,
-                buying_price: value,
-                // Then calculate profit using the new value and current selling price
-                profit: ((Number(value) || 0) - (Number(prev.selling_price) || 0)).toString()
-              }));
-            }}
-          />
-        </View>
-      </View>
+            {renderSection('pricing', t('pricing', 'addProduct'), 'currency-usd', (
+              <>
+                {/* Price Row */}
+                <View style={styles.row}>
+                  <View style={[styles.inputWrapper, styles.halfWidth]}>
+                    <Text style={styles.label}>{t('buyingPrice', 'addProduct')}</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="0.00"
+                        placeholderTextColor="#64748b"
+                        keyboardType="numeric"
+                        value={form.buying_price}
+                        onChangeText={(value) => {
+                          setForm(prev => ({
+                            ...prev,
+                            buying_price: value,
+                            profit: ((Number(prev.selling_price) || 0) - (Number(value) || 0)).toString()
+                          }));
+                        }}
+                      />
+                    </View>
+                  </View>
 
-      <View style={[styles.inputWrapper, styles.halfWidth]}>
-        <Text style={styles.label}>የሽያጭ ዋጋ *</Text>
-        <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="0.00"
-            placeholderTextColor="#64748b"
-            keyboardType="numeric"
-            value={form.selling_price}
-            onChangeText={(value) => {
-              // First update the selling price
-              setForm(prev => ({
-                ...prev,
-                selling_price: value,
-                // Then calculate profit using the new value and current buying price
-                profit: ((Number(value) || 0) - (Number(prev.buying_price) || 0)).toString()
-              }));
-            }}
-          />
-        </View>
-      </View>
-    </View>
+                  <View style={[styles.inputWrapper, styles.halfWidth]}>
+                    <Text style={styles.label}>{t('sellingPrice', 'addProduct')}</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="0.00"
+                        placeholderTextColor="#64748b"
+                        keyboardType="numeric"
+                        value={form.selling_price}
+                        onChangeText={(value) => {
+                          setForm(prev => ({
+                            ...prev,
+                            selling_price: value,
+                            profit: ((Number(value) || 0) - (Number(prev.buying_price) || 0)).toString()
+                          }));
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
 
-    {/* Profit Display */}
-    {(form.buying_price || form.selling_price) && (
-      <View style={styles.profitContainer}>
-        <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
-        <Text style={styles.profitText}>
-          ትርፍ: {calculateProfit()} ብር
-        </Text>
-        <Text style={styles.profitPercent}>
-          ({Number(form.buying_price) > 0 
-            ? ((Number(form.selling_price || 0) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)
-            : '0.0'}%)
-        </Text>
-      </View>
-    )}
-  </>
-))}
+                {/* Profit Display */}
+                {(form.buying_price || form.selling_price) && (
+                  <View style={styles.profitContainer}>
+                    <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
+                    <Text style={styles.profitText}>
+                      {t('profit', 'addProduct')}: {calculateProfit()} ብር
+                    </Text>
+                    <Text style={styles.profitPercent}>
+                      ({Number(form.buying_price) > 0 
+                        ? ((Number(form.selling_price || 0) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)
+                        : '0.0'}%)
+                    </Text>
+                  </View>
+                )}
+              </>
+            ))}
 
-  
             {/* Stock Management Section */}
-            {renderSection('stock', 'ክምችት አስተዳደር', 'package-variant', (
+            {renderSection('stock', t('stock', 'addProduct'), 'package-variant', (
               <>
                 {/* Total Stock */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>አጠቃላይ ክምችት</Text>
+                  <Text style={styles.label}>{t('totalStock', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="package-variant" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
@@ -479,7 +461,7 @@ export default function AddProductScreen() {
                 {/* Min and Max Stock */}
                 <View style={styles.row}>
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>ዝቅተኛ ክምችት</Text>
+                    <Text style={styles.label}>{t('minStock', 'addProduct')}</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="arrow-down-circle" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -494,7 +476,7 @@ export default function AddProductScreen() {
                   </View>
 
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>ከፍተኛ ክምችት</Text>
+                    <Text style={styles.label}>{t('maxStock', 'addProduct')}</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="arrow-up-circle" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -512,7 +494,7 @@ export default function AddProductScreen() {
                 {/* Stock Movement */}
                 <View style={styles.row}>
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>አዲስ የደረሰ</Text>
+                    <Text style={styles.label}>{t('newArrival', 'addProduct')}</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="package-up" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -527,7 +509,7 @@ export default function AddProductScreen() {
                   </View>
 
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>የተሸጠ ብዛት</Text>
+                    <Text style={styles.label}>{t('soldQuantity', 'addProduct')}</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="cart" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -545,16 +527,16 @@ export default function AddProductScreen() {
             ))}
 
             {/* Additional Information Section */}
-            {renderSection('additional', 'ተጨማሪ መረጃ', 'dots-horizontal', (
+            {renderSection('additional', t('additional', 'addProduct'), 'dots-horizontal', (
               <>
                 {/* Location */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>መገኛ</Text>
+                  <Text style={styles.label}>{t('location', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="map-marker" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="መደርደሪያ ቁጥር"
+                      placeholder={t('locationPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.location}
                       onChangeText={(value) => handleInputChange('location', value)}
@@ -564,12 +546,12 @@ export default function AddProductScreen() {
 
                 {/* Supplier ID */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>አቅራቢ መለያ</Text>
+                  <Text style={styles.label}>{t('supplierId', 'addProduct')}</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="truck" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="SUP-001"
+                      placeholder={t('supplierIdPlaceholder', 'addProduct')}
                       placeholderTextColor="#64748b"
                       value={form.supplier_id}
                       onChangeText={(value) => handleInputChange('supplier_id', value)}
@@ -579,7 +561,7 @@ export default function AddProductScreen() {
 
                 {/* Status */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>ሁኔታ</Text>
+                  <Text style={styles.label}>{t('status', 'addProduct')}</Text>
                   <View style={styles.statusContainer}>
                     <TouchableOpacity
                       style={[styles.statusOption, form.status === 'active' && styles.statusOptionActive]}
@@ -591,7 +573,7 @@ export default function AddProductScreen() {
                         color={form.status === 'active' ? '#10b981' : '#64748b'} 
                       />
                       <Text style={[styles.statusOptionText, form.status === 'active' && styles.statusOptionTextActive]}>
-                        ንቁ
+                        {t('active', 'addProduct')}
                       </Text>
                     </TouchableOpacity>
                     
@@ -605,7 +587,7 @@ export default function AddProductScreen() {
                         color={form.status === 'inactive' ? '#ef4444' : '#64748b'} 
                       />
                       <Text style={[styles.statusOptionText, form.status === 'inactive' && styles.statusOptionTextInactive]}>
-                        የተቋረጠ
+                        {t('inactive', 'addProduct')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -624,7 +606,7 @@ export default function AddProductScreen() {
               ) : (
                 <>
                   <MaterialCommunityIcons name="check-circle" size={20} color="#ffffff" />
-                  <Text style={styles.submitButtonText}>ምርቱን ጨምር</Text>
+                  <Text style={styles.submitButtonText}>{t('addProduct', 'addProduct')}</Text>
                 </>
               )}
             </TouchableOpacity>

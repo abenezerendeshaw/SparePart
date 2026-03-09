@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
+import { useLanguage } from '../../../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,6 +46,7 @@ interface Product {
 
 export default function AddSaleScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -59,7 +61,7 @@ export default function AddSaleScreen() {
   });
 
   const [form, setForm] = useState({
-    customer_name: 'Walk-in Customer',
+    customer_name: t('walkInCustomer', 'sales'),
     customer_phone: '',
     customer_email: '',
     payment_method: 'cash',
@@ -119,7 +121,7 @@ export default function AddSaleScreen() {
 
   useEffect(() => {
     if (expandedSections.customer && 
-        (form.customer_name !== 'Walk-in Customer' || form.customer_phone)) {
+        (form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone)) {
       // After customer info is entered, automatically expand payment section
       toggleSection('payment');
     }
@@ -161,7 +163,7 @@ export default function AddSaleScreen() {
 
   const saveItem = () => {
     if (!editingItem?.product_id || !editingItem.quantity || editingItem.quantity <= 0) {
-      Alert.alert('ስህተት', 'ትክክለኛ ብዛት ያስገቡ');
+      Alert.alert(t('error'), t('validQuantity', 'sales'));
       return;
     }
 
@@ -223,7 +225,7 @@ export default function AddSaleScreen() {
 
   const validateForm = () => {
     if (items.length === 0) {
-      Alert.alert('ስህተት', 'ቢያንስ አንድ ምርት ይምረጡ');
+      Alert.alert(t('error'), t('selectProduct', 'sales'));
       return false;
     }
     return true;
@@ -266,25 +268,25 @@ export default function AddSaleScreen() {
 
       if (response.data.status === 'success') {
         Alert.alert(
-          'ተሳክቷል',
-          'ሽያጭ በተሳካ ሁኔታ ተመዝግቧል',
+          t('success'),
+          t('saleSaved', 'sales'),
           [
             {
-              text: 'ወደ ሽያጮች ይሂዱ',
+              text: t('goToSales', 'sales'),
               onPress: () => router.push('/(tab)/sales'),
             },
             {
-              text: 'ደረሰኝ እይ',
+              text: t('viewReceipt', 'sales'),
               onPress: () => router.push(`/sales/receipt/${response.data.data.sale_id}`),
             },
           ]
         );
       } else {
-        Alert.alert('ስህተት', response.data.message || 'ሽያጭ መመዝገብ አልተሳካም');
+        Alert.alert(t('error'), response.data.message || t('saleSaveFailed', 'sales'));
       }
     } catch (error: any) {
       console.log('Error adding sale:', error);
-      Alert.alert('ስህተት', error.response?.data?.message || 'እባክዎ እንደገና ይሞክሩ');
+      Alert.alert(t('error'), error.response?.data?.message || t('tryAgain', 'common'));
     } finally {
       setLoading(false);
     }
@@ -340,14 +342,14 @@ export default function AddSaleScreen() {
     return (
       <View style={styles.miniSummary}>
         <Text style={styles.miniSummaryText}>
-          {items.length} ምርቶች · ድምር {totalAmount.toFixed(0)} ብር
+          {items.length} {t('products', 'common')} · {t('total', 'sales')} {totalAmount.toFixed(0)} {t('currency', 'common')}
         </Text>
       </View>
     );
   };
 
   const renderCustomerMiniSummary = () => {
-    if (form.customer_name === 'Walk-in Customer' && !form.customer_phone) return null;
+    if (form.customer_name === t('walkInCustomer', 'sales') && !form.customer_phone) return null;
     return (
       <View style={styles.miniSummary}>
         <Text style={styles.miniSummaryText} numberOfLines={1}>
@@ -361,7 +363,7 @@ export default function AddSaleScreen() {
     return (
       <View style={styles.miniSummary}>
         <Text style={styles.miniSummaryText}>
-          {grandTotal.toFixed(0)} ብር · {paidAmount > 0 ? `ተከፍሏል ${paidAmount.toFixed(0)}` : 'አልተከፈለም'}
+          {grandTotal.toFixed(0)} {t('currency', 'common')} · {paidAmount > 0 ? `${t('paid', 'common')} ${paidAmount.toFixed(0)}` : t('unpaid', 'sales')}
         </Text>
       </View>
     );
@@ -388,7 +390,7 @@ export default function AddSaleScreen() {
             >
               <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>አዲስ ሽያጭ</Text>
+            <Text style={styles.headerTitle}>{t('newSale', 'sales')}</Text>
             <TouchableOpacity 
               style={styles.addButton}
               onPress={() => {
@@ -408,25 +410,25 @@ export default function AddSaleScreen() {
                 size={16} 
                 color={items.length > 0 ? "#10b981" : "#64748b"} 
               />
-              <Text style={[styles.progressText, items.length > 0 && styles.progressTextComplete]}>ምርቶች</Text>
+              <Text style={[styles.progressText, items.length > 0 && styles.progressTextComplete]}>{t('items', 'sales')}</Text>
             </View>
             <View style={[styles.progressLine, items.length > 0 && styles.progressLineComplete]} />
-            <View style={[styles.progressStep, (form.customer_name !== 'Walk-in Customer' || form.customer_phone) && styles.progressStepComplete]}>
+            <View style={[styles.progressStep, (form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone) && styles.progressStepComplete]}>
               <MaterialCommunityIcons 
-                name={(form.customer_name !== 'Walk-in Customer' || form.customer_phone) ? "check" : "account"} 
+                name={(form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone) ? "check" : "account"} 
                 size={16} 
-                color={(form.customer_name !== 'Walk-in Customer' || form.customer_phone) ? "#10b981" : "#64748b"} 
+                color={(form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone) ? "#10b981" : "#64748b"} 
               />
-              <Text style={[styles.progressText, (form.customer_name !== 'Walk-in Customer' || form.customer_phone) && styles.progressTextComplete]}>ደንበኛ</Text>
+              <Text style={[styles.progressText, (form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone) && styles.progressTextComplete]}>{t('customer', 'sales')}</Text>
             </View>
-            <View style={[styles.progressLine, (form.customer_name !== 'Walk-in Customer' || form.customer_phone) && styles.progressLineComplete]} />
+            <View style={[styles.progressLine, (form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone) && styles.progressLineComplete]} />
             <View style={[styles.progressStep, paidAmount > 0 && styles.progressStepComplete]}>
               <MaterialCommunityIcons 
                 name={paidAmount > 0 ? "check" : "cash"} 
                 size={16} 
                 color={paidAmount > 0 ? "#10b981" : "#64748b"} 
               />
-              <Text style={[styles.progressText, paidAmount > 0 && styles.progressTextComplete]}>ክፍያ</Text>
+              <Text style={[styles.progressText, paidAmount > 0 && styles.progressTextComplete]}>{t('payment', 'sales')}</Text>
             </View>
           </View>
 
@@ -438,14 +440,14 @@ export default function AddSaleScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.quickSummaryLeft}>
-                <MaterialCommunityIcons name="shopping-cart" size={20} color="#10b981" />
+                <MaterialCommunityIcons name="cart" size={20} color="#10b981" />
                 <Text style={styles.quickSummaryText}>
-                  {items.length} ምርቶች · ድምር {totalAmount.toFixed(0)} ብር
+                  {items.length} {t('products', 'common')} · {t('total', 'sales')} {totalAmount.toFixed(0)} {t('currency', 'common')}
                 </Text>
               </View>
               <View style={styles.quickSummaryRight}>
                 <Text style={styles.quickSummaryTotal}>
-                  {grandTotal.toFixed(0)} ብር
+                  {grandTotal.toFixed(0)} {t('currency', 'common')}
                 </Text>
                 <MaterialCommunityIcons name="chevron-right" size={20} color="#94a3b8" />
               </View>
@@ -456,7 +458,7 @@ export default function AddSaleScreen() {
           <View style={styles.form}>
             {/* Items Section */}
             <View style={styles.section}>
-              {renderSectionHeader('ምርቶች', 'items', 'package-variant', 
+              {renderSectionHeader(t('items', 'sales'), 'items', 'package-variant', 
                 items.length > 0 && (
                   <TouchableOpacity 
                     onPress={() => {
@@ -483,8 +485,8 @@ export default function AddSaleScreen() {
                       }}
                     >
                       <MaterialCommunityIcons name="cart-plus" size={48} color="#64748b" />
-                      <Text style={styles.emptyItemsText}>ምርቶችን ይጨምሩ</Text>
-                      <Text style={styles.emptyItemsSubText}>ከታች ያለውን ቁልፍ ተጫን</Text>
+                      <Text style={styles.emptyItemsText}>{t('addItems', 'sales')}</Text>
+                      <Text style={styles.emptyItemsSubText}>{t('pressButton', 'sales')}</Text>
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.itemsList}>
@@ -497,7 +499,7 @@ export default function AddSaleScreen() {
                             </TouchableOpacity>
                           </View>
                           <View style={styles.itemDetails}>
-                            <Text style={styles.itemPrice}>ዋጋ: {item.unit_price} ብር</Text>
+                            <Text style={styles.itemPrice}>{t('price', 'sales')}: {item.unit_price} {t('currency', 'common')}</Text>
                             <View style={styles.quantityControl}>
                               <TouchableOpacity 
                                 style={styles.quantityButton}
@@ -513,7 +515,7 @@ export default function AddSaleScreen() {
                                 <MaterialCommunityIcons name="plus" size={16} color="#ffffff" />
                               </TouchableOpacity>
                             </View>
-                            <Text style={styles.itemTotal}>ድምር: {item.total_price} ብር</Text>
+                            <Text style={styles.itemTotal}>{t('total', 'sales')}: {item.total_price} {t('currency', 'common')}</Text>
                           </View>
                         </View>
                       ))}
@@ -526,7 +528,7 @@ export default function AddSaleScreen() {
                         }}
                       >
                         <MaterialCommunityIcons name="plus-circle" size={20} color="#10b981" />
-                        <Text style={styles.addMoreText}>ተጨማሪ ምርት ጨምር</Text>
+                        <Text style={styles.addMoreText}>{t('addMore', 'sales')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -536,19 +538,19 @@ export default function AddSaleScreen() {
 
             {/* Customer Section */}
             <View style={styles.section}>
-              {renderSectionHeader('ደንበኛ', 'customer', 'account')}
+              {renderSectionHeader(t('customer', 'sales'), 'customer', 'account')}
               
               {!expandedSections.customer && renderCustomerMiniSummary()}
               
               {expandedSections.customer && (
                 <View style={styles.sectionContent}>
                   <View style={styles.inputWrapper}>
-                    <Text style={styles.label}>የደንበኛ ስም</Text>
+                    <Text style={styles.label}>{t('customerName', 'sales')}</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="account" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
-                        placeholder="Walk-in Customer"
+                        placeholder={t('walkInCustomer', 'sales')}
                         placeholderTextColor="#64748b"
                         value={form.customer_name}
                         onChangeText={(value) => handleInputChange('customer_name', value)}
@@ -558,7 +560,7 @@ export default function AddSaleScreen() {
 
                   <View style={styles.row}>
                     <View style={[styles.inputWrapper, styles.halfWidth]}>
-                      <Text style={styles.label}>ስልክ ቁጥር</Text>
+                      <Text style={styles.label}>{t('phone', 'sales')}</Text>
                       <View style={styles.inputContainer}>
                         <MaterialCommunityIcons name="phone" size={20} color="#64748b" style={styles.inputIcon} />
                         <TextInput
@@ -573,7 +575,7 @@ export default function AddSaleScreen() {
                     </View>
 
                     <View style={[styles.inputWrapper, styles.halfWidth]}>
-                      <Text style={styles.label}>ኢሜይል</Text>
+                      <Text style={styles.label}>{t('email', 'common')}</Text>
                       <View style={styles.inputContainer}>
                         <MaterialCommunityIcons name="email" size={20} color="#64748b" style={styles.inputIcon} />
                         <TextInput
@@ -594,7 +596,7 @@ export default function AddSaleScreen() {
 
             {/* Payment Section */}
             <View style={styles.section}>
-              {renderSectionHeader('ክፍያ', 'payment', 'cash')}
+              {renderSectionHeader(t('payment', 'sales'), 'payment', 'cash')}
               
               {!expandedSections.payment && renderPaymentMiniSummary()}
               
@@ -603,12 +605,12 @@ export default function AddSaleScreen() {
                   {/* Summary */}
                   <View style={styles.summaryCard}>
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>አጠቃላይ መጠን:</Text>
-                      <Text style={styles.summaryValue}>{totalAmount.toFixed(2)} ብር</Text>
+                      <Text style={styles.summaryLabel}>{t('subtotal', 'sales')}:</Text>
+                      <Text style={styles.summaryValue}>{totalAmount.toFixed(2)} {t('currency', 'common')}</Text>
                     </View>
                     
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>ቅናሽ:</Text>
+                      <Text style={styles.summaryLabel}>{t('discount', 'sales')}:</Text>
                       <TextInput
                         style={styles.summaryInput}
                         value={form.discount}
@@ -620,12 +622,12 @@ export default function AddSaleScreen() {
                     </View>
 
                     <View style={[styles.summaryRow, styles.totalRow]}>
-                      <Text style={styles.totalLabel}>ድምር ደምር:</Text>
-                      <Text style={styles.totalValue}>{grandTotal.toFixed(2)} ብር</Text>
+                      <Text style={styles.totalLabel}>{t('grandTotal', 'sales')}:</Text>
+                      <Text style={styles.totalValue}>{grandTotal.toFixed(2)} {t('currency', 'common')}</Text>
                     </View>
 
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>የተከፈለ:</Text>
+                      <Text style={styles.summaryLabel}>{t('paid', 'common')}:</Text>
                       <TextInput
                         style={styles.summaryInput}
                         value={form.paid_amount}
@@ -637,9 +639,9 @@ export default function AddSaleScreen() {
                     </View>
 
                     <View style={[styles.summaryRow, styles.dueRow]}>
-                      <Text style={styles.dueLabel}>የቀረ:</Text>
+                      <Text style={styles.dueLabel}>{t('due', 'common')}:</Text>
                       <Text style={[styles.dueValue, dueAmount > 0 ? styles.dueNegative : styles.dueZero]}>
-                        {dueAmount.toFixed(2)} ብር
+                        {dueAmount.toFixed(2)} {t('currency', 'common')}
                       </Text>
                     </View>
 
@@ -661,22 +663,22 @@ export default function AddSaleScreen() {
                         paymentStatus === 'partial' && styles.statusPartial,
                         paymentStatus === 'pending' && styles.statusPending,
                       ]}>
-                        {paymentStatus === 'paid' && 'ተከፍሏል'}
-                        {paymentStatus === 'partial' && 'በከፊል ተከፍሏል'}
-                        {paymentStatus === 'pending' && 'አልተከፈለም'}
+                        {paymentStatus === 'paid' && t('paid', 'common')}
+                        {paymentStatus === 'partial' && t('partial', 'sales')}
+                        {paymentStatus === 'pending' && t('unpaid', 'sales')}
                       </Text>
                     </View>
                   </View>
 
                   {/* Payment Method */}
                   <View style={styles.inputWrapper}>
-                    <Text style={styles.label}>የክፍያ ዘዴ</Text>
+                    <Text style={styles.label}>{t('paymentMethod', 'sales')}</Text>
                     <View style={styles.paymentMethodContainer}>
                       {[
-                        { value: 'cash', label: 'ጥሬ ገንዘብ', icon: 'cash' },
-                        { value: 'card', label: 'ካርድ', icon: 'credit-card' },
-                        { value: 'transfer', label: 'ዝውውር', icon: 'bank-transfer' },
-                        { value: 'other', label: 'ሌላ', icon: 'dots-horizontal' },
+                        { value: 'cash', label: t('cash', 'sales'), icon: 'cash' },
+                        { value: 'card', label: t('card', 'sales'), icon: 'credit-card' },
+                        { value: 'transfer', label: t('transfer', 'sales'), icon: 'bank-transfer' },
+                        { value: 'other', label: t('other', 'common'), icon: 'dots-horizontal' },
                       ].map((method) => (
                         <TouchableOpacity
                           key={method.value}
@@ -706,12 +708,12 @@ export default function AddSaleScreen() {
 
                   {/* Notes */}
                   <View style={styles.inputWrapper}>
-                    <Text style={styles.label}>ማስታወሻ</Text>
+                    <Text style={styles.label}>{t('notes', 'sales')}</Text>
                     <View style={[styles.inputContainer, styles.textAreaContainer]}>
                       <MaterialCommunityIcons name="note-text" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
                         style={[styles.input, styles.textArea]}
-                        placeholder="ማስታወሻ ያስገቡ..."
+                        placeholder={t('notesPlaceholder', 'sales')}
                         placeholderTextColor="#64748b"
                         multiline
                         numberOfLines={3}
@@ -736,7 +738,7 @@ export default function AddSaleScreen() {
               ) : (
                 <>
                   <MaterialCommunityIcons name="check-circle" size={20} color="#ffffff" />
-                  <Text style={styles.submitButtonText}>ሽያጩን አስቀምጥ</Text>
+                  <Text style={styles.submitButtonText}>{t('saveSale', 'sales')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -753,7 +755,7 @@ export default function AddSaleScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>ምርት ይምረጡ</Text>
+                <Text style={styles.modalTitle}>{t('selectProduct', 'sales')}</Text>
                 <TouchableOpacity onPress={() => setShowProductModal(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#ffffff" />
                 </TouchableOpacity>
@@ -763,7 +765,7 @@ export default function AddSaleScreen() {
                 <MaterialCommunityIcons name="magnify" size={20} color="#64748b" style={styles.searchIcon} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="ምርት ፈልግ..."
+                  placeholder={t('searchProduct', 'sales')}
                   placeholderTextColor="#64748b"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -783,14 +785,14 @@ export default function AddSaleScreen() {
                       <Text style={styles.productCode}>{item.product_code}</Text>
                     </View>
                     <View style={styles.productPrice}>
-                      <Text style={styles.priceText}>{item.selling_price} ብር</Text>
-                      <Text style={styles.stockText}>ቀሪ: {item.total_stock}</Text>
+                      <Text style={styles.priceText}>{item.selling_price} {t('currency', 'common')}</Text>
+                      <Text style={styles.stockText}>{t('stock', 'common')}: {item.total_stock}</Text>
                     </View>
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
                   <View style={styles.emptyList}>
-                    <Text style={styles.emptyListText}>ምንም ምርት አልተገኘም</Text>
+                    <Text style={styles.emptyListText}>{t('noProducts', 'common')}</Text>
                   </View>
                 }
               />
@@ -844,10 +846,10 @@ export default function AddSaleScreen() {
 
               <View style={styles.centeredPriceInfo}>
                 <Text style={styles.centeredUnitPrice}>
-                  አንድ {editingItem?.unit_price} ብር
+                  {t('each', 'sales')} {editingItem?.unit_price} {t('currency', 'common')}
                 </Text>
                 <Text style={styles.centeredTotalPrice}>
-                  ድምር: {(editingItem?.unit_price || 0) * (editingItem?.quantity || 1)} ብር
+                  {t('total', 'sales')}: {(editingItem?.unit_price || 0) * (editingItem?.quantity || 1)} {t('currency', 'common')}
                 </Text>
               </View>
 
@@ -859,7 +861,7 @@ export default function AddSaleScreen() {
                     setEditingItem(null);
                   }}
                 >
-                  <Text style={styles.centeredCancelActionText}>ሰርዝ</Text>
+                  <Text style={styles.centeredCancelActionText}>{t('cancel', 'common')}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -867,7 +869,7 @@ export default function AddSaleScreen() {
                   onPress={saveItem}
                 >
                   <MaterialCommunityIcons name="check" size={20} color="#ffffff" />
-                  <Text style={styles.centeredSaveActionText}>አስቀምጥ</Text>
+                  <Text style={styles.centeredSaveActionText}>{t('save', 'common')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

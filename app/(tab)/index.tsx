@@ -24,9 +24,11 @@ import {
   Linking,
   ScrollView
 } from 'react-native';
-import api from '../lib/api';
+
 import storage from '../lib/storage';
 import axios from 'axios';
+import { useLanguage } from '../../context/LanguageContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 const { width } = Dimensions.get('window');
 
@@ -81,11 +83,12 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userFullName, setUserFullName] = useState('ነጋዴ');
+  const [userFullName, setUserFullName] = useState(t('trader', 'common'));
   const [userRole, setUserRole] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -162,7 +165,7 @@ export default function Dashboard() {
   }, []);
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('am-ET', {
+    return date.toLocaleDateString(language === 'am' ? 'am-ET' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -171,11 +174,8 @@ export default function Dashboard() {
 
   const fetchUserData = async () => {
     try {
-      // Try to get user info from token or API
       const token = await storage.getItem('authToken');
       if (token) {
-        // You can decode the JWT token to get user info
-        // This is a simple example - you might have a /user endpoint
         const base64Url = token.split('.')[1];
         if (base64Url) {
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -202,7 +202,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Fetch user data first
       await fetchUserData();
 
       const api = axios.create({
@@ -215,10 +214,8 @@ export default function Dashboard() {
         }
       });
 
-      // Fetch products
       const productsResponse = await api.get('/products?limit=100');
       
-      // Fetch sales
       let salesResponse = { data: { data: { sales: [] } } };
       try {
         salesResponse = await api.get('/sales?limit=50');
@@ -227,21 +224,19 @@ export default function Dashboard() {
         console.log('Sales fetch failed:', salesError.message);
       }
 
-      // Extract data
       const productsData = productsResponse.data?.data?.products || [];
       const salesData = salesResponse.data?.data?.sales || [];
 
       setProducts(productsData);
       setSales(salesData);
 
-      // If we have sales data and user name not set, use cashier name
-      if (salesData.length > 0 && salesData[0].cashier_name && userFullName === 'ነጋዴ') {
+      if (salesData.length > 0 && salesData[0].cashier_name && userFullName === t('trader', 'common')) {
         setUserFullName(salesData[0].cashier_name);
       }
 
     } catch (error: any) {
       console.error('Fetch error:', error.message);
-      Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
+      Alert.alert(t('error'), t('dataLoadFailed', 'common'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -336,7 +331,7 @@ export default function Dashboard() {
                 </Text>
               </View>
               <Text style={styles.productCardPrice}>
-                ETB {Number(item.selling_price).toLocaleString()}
+                {t('currency', 'common')} {Number(item.selling_price).toLocaleString()}
               </Text>
             </View>
           </View>
@@ -371,7 +366,7 @@ export default function Dashboard() {
               styles.paymentStatusText,
               { color: item.payment_status === 'paid' ? '#10b981' : '#f59e0b' }
             ]}>
-              {item.payment_status === 'paid' ? 'ተከፍሏል' : 'ዕዳ'}
+              {item.payment_status === 'paid' ? t('paid', 'common') : t('due', 'common')}
             </Text>
           </View>
         </View>
@@ -392,8 +387,8 @@ export default function Dashboard() {
         </View>
         
         <View style={styles.saleFooter}>
-          <Text style={styles.saleItems}>{item.item_count} እቃዎች</Text>
-          <Text style={styles.saleAmount}>ETB {Number(item.grand_total).toLocaleString()}</Text>
+          <Text style={styles.saleItems}>{item.item_count} {t('items', 'common')}</Text>
+          <Text style={styles.saleAmount}>{t('currency', 'common')} {Number(item.grand_total).toLocaleString()}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -401,12 +396,12 @@ export default function Dashboard() {
 
   const handleContactSupport = () => {
     Alert.alert(
-      'እገዛ እና ድጋፍ',
-      'እንዴት ልንረዳዎ እንችላለን?',
+      t('support', 'common'),
+      t('supportMessage', 'common'),
       [
-        { text: 'ስልክ ደውል', onPress: () => Linking.openURL('tel:+251972989963') },
-        { text: 'ኢሜይል ላክ', onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
-        { text: 'ውጣ', style: 'cancel' }
+        { text: t('call', 'common'), onPress: () => Linking.openURL('tel:+251972989963') },
+        { text: t('email', 'common'), onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
+        { text: t('cancel', 'common'), style: 'cancel' }
       ]
     );
   };
@@ -416,7 +411,7 @@ export default function Dashboard() {
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         <ActivityIndicator size="large" color="#2974ff" />
-        <Text style={styles.loadingText}>ዳታ በመጫን ላይ...</Text>
+        <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
       </LinearGradient>
     );
   }
@@ -425,7 +420,7 @@ export default function Dashboard() {
     <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
       
-      {/* Animated Header with User Full Name */}
+      {/* Animated Header with User Full Name and Language Switcher */}
       <Animated.View style={[styles.header, headerAnimatedStyle]}>
         <View style={styles.userInfoContainer}>
           <View style={styles.userAvatar}>
@@ -435,7 +430,7 @@ export default function Dashboard() {
           </View>
           <View style={styles.userDetails}>
             <Text style={styles.userFullName}>{userFullName}</Text>
-            <Text style={styles.userRole}>{userRole || 'እርሶ ነጋዴ ነዎት'}</Text>
+            <Text style={styles.userRole}>{userRole || t('trader', 'common')}</Text>
             <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
               {formatDate(currentTime)}
             </Animated.Text>
@@ -443,9 +438,10 @@ export default function Dashboard() {
         </View>
         
         <View style={styles.headerActions}>
+          <LanguageSwitcher />
           <TouchableOpacity 
             style={styles.notificationButton}
-            onPress={() => Alert.alert('ማሳወቂያዎች', 'አዲስ ማሳወቂያ የለም')}
+            onPress={() => Alert.alert(t('notifications', 'common'), t('noNotifications', 'common'))}
           >
             <MaterialCommunityIcons name="bell-outline" size={24} color="#ffffff" />
             {stats.lowStockCount > 0 && (
@@ -478,107 +474,107 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <StatCard
-            title="አጠቃላይ ምርቶች"
+            title={t('totalProducts', 'dashboard')}
             value={stats.totalProducts}
             icon="package-variant"
             colors={['#2974ff', '#1a4c9e']}
           />
           <StatCard
-            title="አጠቃላይ ክምችት"
+            title={t('totalStock', 'dashboard')}
             value={stats.totalStock.toLocaleString()}
             icon="warehouse"
             colors={['#10b981', '#059669']}
           />
           <StatCard
-            title="የዛሬ ሽያጮች"
+            title={t('todaySales', 'dashboard')}
             value={stats.todaySales}
             icon="cart-outline"
-            subtitle={`ETB ${stats.todayRevenue.toLocaleString()}`}
+            subtitle={`${t('currency', 'common')} ${stats.todayRevenue.toLocaleString()}`}
             colors={['#f59e0b', '#d97706']}
           />
           <StatCard
-            title="አጠቃላይ ገቢ"
-            value={`ETB ${stats.totalRevenue.toLocaleString()}`}
+            title={t('totalRevenue', 'dashboard')}
+            value={`${t('currency', 'common')} ${stats.totalRevenue.toLocaleString()}`}
             icon="currency-usd"
-            subtitle={`ከ${stats.totalSales} ሽያጮች`}
+            subtitle={`${t('from', 'common')} ${stats.totalSales} ${t('sales', 'common')}`}
             colors={['#8b5cf6', '#6d28d9']}
           />
         </View>
 
-{/* Low Stock Warning */}
-{stats.lowStockCount > 0 && (
-  <TouchableOpacity 
-    style={styles.warningContainer}
-    onPress={() => {
-      const lowStockProducts = products.filter(p => (p.total_stock || 0) <= (p.min_stock || 10));
-      
-      if (lowStockProducts.length > 0) {
-        // Create a more detailed alert
-        const alertMessage = lowStockProducts.map(p => 
-          `• ${p.product_name}\n  ቀሪ: ${p.total_stock} ${p.unit || 'pcs'}\n  ዝቅተኛ: ${p.min_stock || 10}`
-        ).join('\n\n');
-        
-        Alert.alert(
-          '⚠️ ዝቅተኛ ክምችት ያላቸው ምርቶች',
-          alertMessage,
-          [
-            { 
-              text: 'ዝርዝር ለማየት', 
-              onPress: () => {
-                // Navigate to low stock filter view
-                router.push('/products?filter=low_stock');
-              } 
-            },
-            { text: 'ዝጋ', style: 'cancel' }
-          ]
-        );
-      }
-    }}
-  >
-    <View style={styles.warningIconContainer}>
-      <MaterialCommunityIcons name="alert" size={28} color="#ff9800" />
-      <View style={styles.warningBadge}>
-        <Text style={styles.warningBadgeText}>{stats.lowStockCount}</Text>
-      </View>
-    </View>
-    
-    <View style={styles.warningContent}>
-      <Text style={styles.warningTitle}>ዝቅተኛ ክምችት ማስጠንቀቂያ</Text>
-      <Text style={styles.warningDesc}>
-        {stats.lowStockCount} ምርቶች {stats.lowStockCount === 1 ? 'ክምችት ማዘዝ ያስፈልገዋል' : 'ክምችት ማዘዝ ያስፈልጋቸዋል'}
-      </Text>
-      
-      {/* Progress bar for low stock */}
-      <View style={styles.warningProgressContainer}>
-        <View style={styles.warningProgressBg}>
-          <View 
-            style={[
-              styles.warningProgressFill, 
-              { 
-                width: `${Math.min(100, (stats.lowStockCount / products.length) * 100)}%`,
-                backgroundColor: stats.lowStockCount > 10 ? '#ff9800' : 
-                                stats.lowStockCount > 5 ? '#f57c00' : '#ef4444'
+        {/* Low Stock Warning */}
+        {stats.lowStockCount > 0 && (
+          <TouchableOpacity 
+            style={styles.warningContainer}
+            onPress={() => {
+              const lowStockProducts = products.filter(p => (p.total_stock || 0) <= 10);
+              
+              if (lowStockProducts.length > 0) {
+                const alertMessage = lowStockProducts.map(p => 
+                  `• ${p.product_name}\n  ${t('remaining', 'common')}: ${p.total_stock} ${p.unit || 'pcs'}\n  ${t('minStock', 'addProduct')}: 10`
+                ).join('\n\n');
+                
+                Alert.alert(
+                  `⚠️ ${t('lowStockWarning', 'dashboard')}`,
+                  alertMessage,
+                  [
+                    { 
+                      text: t('viewDetails', 'common'), 
+                      onPress: () => {
+                        router.push('/products?filter=low_stock');
+                      } 
+                    },
+                    { text: t('close', 'common'), style: 'cancel' }
+                  ]
+                );
               }
-            ]} 
-          />
-        </View>
-        <Text style={styles.warningProgressText}>
-          {stats.lowStockCount} / {products.length} ምርቶች
-        </Text>
-      </View>
-    </View>
-    
-    <MaterialCommunityIcons name="chevron-right" size={28} color="#ff9800" />
-  </TouchableOpacity>
-)}
+            }}
+          >
+            <View style={styles.warningIconContainer}>
+              <MaterialCommunityIcons name="alert" size={28} color="#ff9800" />
+              <View style={styles.warningBadge}>
+                <Text style={styles.warningBadgeText}>{stats.lowStockCount}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.warningContent}>
+              <Text style={styles.warningTitle}>{t('lowStockWarning', 'dashboard')}</Text>
+              <Text style={styles.warningDesc}>
+                {stats.lowStockCount === 1 
+                  ? t('lowStockSingle', 'dashboard')
+                  : t('lowStockMultiple', 'dashboard').replace('{count}', stats.lowStockCount.toString())}
+              </Text>
+              
+              {/* Progress bar for low stock */}
+              <View style={styles.warningProgressContainer}>
+                <View style={styles.warningProgressBg}>
+                  <View 
+                    style={[
+                      styles.warningProgressFill, 
+                      { 
+                        width: `${Math.min(100, (stats.lowStockCount / products.length) * 100)}%`,
+                        backgroundColor: stats.lowStockCount > 10 ? '#ff9800' : 
+                                        stats.lowStockCount > 5 ? '#f57c00' : '#ef4444'
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.warningProgressText}>
+                  {stats.lowStockCount} / {products.length} {t('products', 'common')}
+                </Text>
+              </View>
+            </View>
+            
+            <MaterialCommunityIcons name="chevron-right" size={28} color="#ff9800" />
+          </TouchableOpacity>
+        )}
 
         {/* Recent Sales Section */}
         {stats.recentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>የቅርብ ጊዜ ሽያጮች</Text>
+              <Text style={styles.sectionTitle}>{t('recentSales', 'dashboard')}</Text>
               <TouchableOpacity onPress={() => router.push('/(tab)/sales')}>
-                <Text style={styles.seeAllLink}>ሁሉንም ተመልከት</Text>
+                <Text style={styles.seeAllLink}>{t('viewAll', 'common')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -591,21 +587,21 @@ export default function Dashboard() {
         {/* Recent Products Section - Horizontal Scroll */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>የቅርብ ጊዜ ምርቶች</Text>
+            <Text style={styles.sectionTitle}>{t('recentProducts', 'dashboard')}</Text>
             <TouchableOpacity onPress={() => router.push('/(tab)/products')}>
-              <Text style={styles.seeAllLink}>ሁሉንም ተመልከት</Text>
+              <Text style={styles.seeAllLink}>{t('viewAll', 'common')}</Text>
             </TouchableOpacity>
           </View>
 
           {stats.recentProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="package-variant" size={48} color="#475569" />
-              <Text style={styles.emptyText}>ምንም ምርቶች አልተገኙም</Text>
+              <Text style={styles.emptyText}>{t('noProducts', 'common')}</Text>
               <TouchableOpacity 
                 style={styles.addButton}
                 onPress={() => router.push('/(tab)/products/add')}
               >
-                <Text style={styles.addButtonText}>ምርት ጨምር</Text>
+                <Text style={styles.addButtonText}>{t('addProduct', 'addProduct')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -623,7 +619,7 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.quickActionsTitle}>ፈጣን እርምጃዎች</Text>
+          <Text style={styles.quickActionsTitle}>{t('quickActions', 'dashboard')}</Text>
           <View style={styles.actionButtons}>
             <TouchableOpacity 
               style={styles.actionButton}
@@ -634,7 +630,7 @@ export default function Dashboard() {
                 style={styles.actionGradient}
               >
                 <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>ምርት ጨምር</Text>
+                <Text style={styles.actionText}>{t('addProduct', 'addProduct')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -647,7 +643,7 @@ export default function Dashboard() {
                 style={styles.actionGradient}
               >
                 <MaterialCommunityIcons name="cash-register" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>አዲስ ሽያጭ</Text>
+                <Text style={styles.actionText}>{t('newSale', 'common')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -660,7 +656,7 @@ export default function Dashboard() {
                 style={styles.actionGradient}
               >
                 <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>ሁሉም ምርቶች</Text>
+                <Text style={styles.actionText}>{t('allProducts', 'common')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -673,7 +669,7 @@ export default function Dashboard() {
                 style={styles.actionGradient}
               >
                 <MaterialCommunityIcons name="history" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>ሽያጭ ታሪክ</Text>
+                <Text style={styles.actionText}>{t('salesHistory', 'common')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -682,10 +678,8 @@ export default function Dashboard() {
         {/* Contact Support Button */}
         <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
           <MaterialCommunityIcons name="headset" size={20} color="#2974ff" />
-          <Text style={styles.supportText}>እገዛ እና ድጋፍ</Text>
+          <Text style={styles.supportText}>{t('support', 'common')}</Text>
         </TouchableOpacity>
-
-       
         
         {/* Extra bottom padding for better scrolling */}
         <View style={{ height: 100 }} />
@@ -697,13 +691,13 @@ export default function Dashboard() {
           style={styles.fab}
           onPress={() => {
             Alert.alert(
-              'ፈጣን እርምጃ',
-              'ምን ማድረግ ይፈልጋሉ?',
+              t('quickAction', 'common'),
+              t('quickActionMessage', 'common'),
               [
-                { text: 'ምርት ጨምር', onPress: () => router.push('/(tab)/products/add') },
-                { text: 'አዲስ ሽያጭ', onPress: () => router.push('/(tab)/sales/new') },
-                { text: 'እገዛ', onPress: handleContactSupport },
-                { text: 'ውጣ', style: 'cancel' }
+                { text: t('addProduct', 'addProduct'), onPress: () => router.push('/(tab)/products/add') },
+                { text: t('newSale', 'common'), onPress: () => router.push('/(tab)/sales/new') },
+                { text: t('support', 'common'), onPress: handleContactSupport },
+                { text: t('cancel', 'common'), style: 'cancel' }
               ]
             );
           }}
@@ -787,6 +781,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     marginLeft: 12,
   },
   notificationButton: {
@@ -857,8 +852,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-
-
   section: {
     paddingHorizontal: 20,
     marginTop: 20,
@@ -1139,80 +1132,78 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-
-
   warningContainer: {
-  backgroundColor: 'rgba(255, 152, 0, 0.1)',
-  borderRadius: 16,
-  padding: 16,
-  marginHorizontal: 20,
-  marginBottom: 16,
-  flexDirection: 'row',
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#ff9800',
-  shadowColor: '#ff9800',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 8,
-  elevation: 3,
-},
-warningIconContainer: {
-  position: 'relative',
-  marginRight: 12,
-},
-warningBadge: {
-  position: 'absolute',
-  top: -8,
-  right: -8,
-  backgroundColor: '#ef4444',
-  borderRadius: 12,
-  minWidth: 20,
-  height: 20,
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingHorizontal: 4,
-  borderWidth: 2,
-  borderColor: '#0f1623',
-},
-warningBadgeText: {
-  color: '#ffffff',
-  fontSize: 10,
-  fontWeight: 'bold',
-},
-warningContent: {
-  flex: 1,
-},
-warningTitle: {
-  color: '#ff9800',
-  fontSize: 16,
-  fontWeight: 'bold',
-  marginBottom: 4,
-},
-warningDesc: {
-  color: '#94a3b8',
-  fontSize: 13,
-  marginBottom: 8,
-},
-warningProgressContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-warningProgressBg: {
-  flex: 1,
-  height: 6,
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  borderRadius: 3,
-  overflow: 'hidden',
-},
-warningProgressFill: {
-  height: '100%',
-  borderRadius: 3,
-},
-warningProgressText: {
-  color: '#94a3b8',
-  fontSize: 11,
-  fontWeight: '500',
-},
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ff9800',
+    shadowColor: '#ff9800',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  warningIconContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  warningBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ef4444',
+    borderRadius: 12,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#0f1623',
+  },
+  warningBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    color: '#ff9800',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  warningDesc: {
+    color: '#94a3b8',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  warningProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  warningProgressBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  warningProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  warningProgressText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '500',
+  },
 });

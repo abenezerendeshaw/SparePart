@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
+import { useLanguage } from '../../../context/LanguageContext';
 
 interface Product {
   id: number;
@@ -51,6 +52,7 @@ interface Product {
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -106,20 +108,20 @@ export default function ProductDetailScreen() {
       
       if (error.response?.status === 404) {
         Alert.alert(
-          'ስህተት', 
-          'ምርት አልተገኘም',
+          t('error'), 
+          t('notFound', 'productDetail'),
           [
             { 
-              text: 'ወደ ምርቶች ተመለስ', 
+              text: t('back', 'productDetail'), 
               onPress: () => router.back() 
             }
           ]
         );
       } else if (error.response?.status === 401) {
-        Alert.alert('ስህተት', 'እባክዎ እንደገና ይግቡ');
+        Alert.alert(t('error'), t('loginRequired', 'common'));
         router.replace('/auth/login');
       } else {
-        Alert.alert('ስህተት', error.response?.data?.message || 'የምርት ዝርዝሮችን ማምጣት አልተሳካም');
+        Alert.alert(t('error'), error.response?.data?.message || t('error'));
       }
     } finally {
       setLoading(false);
@@ -137,29 +139,29 @@ export default function ProductDetailScreen() {
     
     try {
       const shareMessage = `
-*${product.product_name}* - የምርት ዝርዝሮች
+*${product.product_name}* - ${t('title', 'productDetail')}
 
-📋 መረጃ:
-ኮድ: ${product.product_code}
-ምድብ: ${product.category || 'የለም'}
-ብራንድ: ${product.brand || 'የለም'}
-መለኪያ: ${product.unit}
+📋 ${t('sections', 'productDetail').categoryBrand}:
+${t('productCode', 'addProduct')}: ${product.product_code}
+${t('category', 'addProduct')}: ${product.category || t('none', 'common')}
+${t('brand', 'addProduct')}: ${product.brand || t('none', 'common')}
+${t('unit', 'addProduct')}: ${product.unit}
 
-📦 ክምችት:
-አጠቃላይ: ${product.total_stock} ${product.unit}
-ዝቅተኛ: ${product.min_stock} ${product.unit}
-ከፍተኛ: ${product.max_stock} ${product.unit}
-የተሸጠ: ${product.selling_quantity} ${product.unit}
+📦 ${t('sections', 'productDetail').currentStock}:
+${t('totalStock', 'addProduct')}: ${product.total_stock} ${product.unit}
+${t('minStock', 'addProduct')}: ${product.min_stock} ${product.unit}
+${t('maxStock', 'addProduct')}: ${product.max_stock} ${product.unit}
+${t('soldQuantity', 'addProduct')}: ${product.selling_quantity} ${product.unit}
 
-💰 ዋጋ:
-የግዢ: ${product.buying_price} ብር
-የሽያጭ: ${product.selling_price} ብር
-ትርፍ: ${product.profit} ብር
+💰 ${t('sections', 'productDetail').prices}:
+${t('buyingPrice', 'addProduct')}: ${product.buying_price} ${t('currency', 'common')}
+${t('sellingPrice', 'addProduct')}: ${product.selling_price} ${t('currency', 'common')}
+${t('profit', 'addProduct')}: ${product.profit} ${t('currency', 'common')}
 
-📍 መገኛ: ${product.location || 'ያልተመዘገበ'}
-አቅራቢ: ${product.supplier_id || 'የለም'}
+📍 ${t('location', 'addProduct')}: ${product.location || t('none', 'common')}
+${t('supplierId', 'addProduct')}: ${product.supplier_id || t('none', 'common')}
 
-${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
+${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.description}` : ''}
       `;
 
       await Share.share({
@@ -183,17 +185,16 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
       console.log('Attempting to delete product with ID:', id);
       
-      // Use ?id= format first since it's working
       const response = await api.delete(`/products?id=${id}`);
       console.log('Delete response:', response.data);
 
       if (response.data && response.data.status === 'success') {
         Alert.alert(
-          'ተሳክቷል', 
-          'ምርት በተሳካ ሁኔታ ተሰርዟል',
+          t('success'), 
+          t('deleteSuccess', 'common'),
           [
             { 
-              text: 'ወደ ምርቶች ተመለስ', 
+              text: t('backToProducts', 'common'), 
               onPress: () => router.back() 
             }
           ]
@@ -204,14 +205,14 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
     } catch (error: any) {
       console.error('Error deleting product:', error);
       
-      let errorMessage = 'ምርት መሰረዝ አልተሳካም';
+      let errorMessage = t('deleteFailed', 'common');
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      Alert.alert('ስህተት', errorMessage);
+      Alert.alert(t('error'), errorMessage);
     } finally {
       setDeleteLoading(false);
       setShowDeleteModal(false);
@@ -245,34 +246,32 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         updatedValue = Number(editValue) || 0;
       }
 
-      // Create update object with only the field being updated
       const updateData = {
         [editingField.field]: updatedValue
       };
 
       console.log('Updating product with data:', updateData);
       
-      // Use ?id= format first since it's working for delete
       const response = await api.put(`/products?id=${id}`, updateData);
       console.log('Update response:', response.data);
 
       if (response.data && response.data.status === 'success') {
         await fetchProductDetails();
-        Alert.alert('ተሳክቷል', `${editingField.label} በተሳካ ሁኔታ ተሻሽሏል`);
+        Alert.alert(t('success'), `${editingField.label} ${t('updated', 'common')}`);
       } else {
         throw new Error('Update failed');
       }
     } catch (error: any) {
       console.error('Error updating product:', error);
       
-      let errorMessage = 'ምርት ማሻሻል አልተሳካም';
+      let errorMessage = t('updateFailed', 'common');
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      Alert.alert('ስህተት', errorMessage);
+      Alert.alert(t('error'), errorMessage);
     } finally {
       setLoading(false);
       setEditingField(null);
@@ -280,23 +279,23 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
   };
 
   const getStockStatus = () => {
-    if (!product) return { color: '#64748b', text: 'የለም', icon: 'help' };
+    if (!product) return { color: '#64748b', text: t('none', 'common'), icon: 'help' };
     
     if (product.total_stock === 0) {
-      return { color: '#ef4444', text: 'ያለቀበት', icon: 'alert-circle' };
+      return { color: '#ef4444', text: t('outOfStock', 'common'), icon: 'alert-circle' };
     } else if (product.total_stock <= product.min_stock) {
-      return { color: '#f59e0b', text: 'አጣዳፊ', icon: 'alert' };
+      return { color: '#f59e0b', text: t('critical', 'common'), icon: 'alert' };
     } else if (product.total_stock <= product.min_stock * 1.5) {
-      return { color: '#f59e0b', text: 'ዝቅተኛ', icon: 'alert' };
+      return { color: '#f59e0b', text: t('low', 'common'), icon: 'alert' };
     } else {
-      return { color: '#10b981', text: 'መደበኛ', icon: 'check-circle' };
+      return { color: '#10b981', text: t('normal', 'common'), icon: 'check-circle' };
     }
   };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-ET', {
+    return date.toLocaleDateString(t('locale', 'common') || 'en-ET', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -311,7 +310,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -323,9 +322,9 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={64} color="#ef4444" />
-          <Text style={styles.errorText}>ምርት አልተገኘም</Text>
+          <Text style={styles.errorText}>{t('notFound', 'productDetail')}</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>ተመለስ</Text>
+            <Text style={styles.backButtonText}>{t('back', 'productDetail')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -411,7 +410,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
             color={activeTab === 'details' ? '#10b981' : '#64748b'} 
           />
           <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
-            ዝርዝሮች
+            {t('details', 'addProduct')}
           </Text>
         </TouchableOpacity>
         
@@ -425,7 +424,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
             color={activeTab === 'stock' ? '#10b981' : '#64748b'} 
           />
           <Text style={[styles.tabText, activeTab === 'stock' && styles.activeTabText]}>
-            ክምችት
+            {t('stock', 'addProduct')}
           </Text>
         </TouchableOpacity>
         
@@ -439,7 +438,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
             color={activeTab === 'pricing' ? '#10b981' : '#64748b'} 
           />
           <Text style={[styles.tabText, activeTab === 'pricing' && styles.activeTabText]}>
-            ዋጋ
+            {t('pricing', 'addProduct')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -455,25 +454,25 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
           <View style={styles.tabContent}>
             {/* Category & Brand */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>ምድብ እና ብራንድ</Text>
+              <Text style={styles.sectionTitle}>{t('category', 'addProduct')} & {t('brand', 'addProduct')}</Text>
               <View style={styles.infoGrid}>
                 <TouchableOpacity 
                   style={styles.infoCard}
-                  onPress={() => handleEdit('category', product.category, 'ምድብ')}
+                  onPress={() => handleEdit('category', product.category, t('category', 'addProduct'))}
                 >
                   <MaterialCommunityIcons name="shape" size={20} color="#10b981" />
-                  <Text style={styles.infoLabel}>ምድብ</Text>
-                  <Text style={styles.infoValue}>{product.category || 'የለም'}</Text>
+                  <Text style={styles.infoLabel}>{t('category', 'addProduct')}</Text>
+                  <Text style={styles.infoValue}>{product.category || t('none', 'common')}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.infoCard}
-                  onPress={() => handleEdit('brand', product.brand, 'ብራንድ')}
+                  onPress={() => handleEdit('brand', product.brand, t('brand', 'addProduct'))}
                 >
                   <MaterialCommunityIcons name="trademark" size={20} color="#10b981" />
-                  <Text style={styles.infoLabel}>ብራንድ</Text>
-                  <Text style={styles.infoValue}>{product.brand || 'የለም'}</Text>
+                  <Text style={styles.infoLabel}>{t('brand', 'addProduct')}</Text>
+                  <Text style={styles.infoValue}>{product.brand || t('none', 'common')}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
                 </TouchableOpacity>
               </View>
@@ -481,25 +480,25 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
             {/* Location & Supplier */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>መገኛ እና አቅራቢ</Text>
+              <Text style={styles.sectionTitle}>{t('location', 'addProduct')} & {t('supplierId', 'addProduct')}</Text>
               <View style={styles.infoGrid}>
                 <TouchableOpacity 
                   style={styles.infoCard}
-                  onPress={() => handleEdit('location', product.location, 'መገኛ')}
+                  onPress={() => handleEdit('location', product.location, t('location', 'addProduct'))}
                 >
                   <MaterialCommunityIcons name="map-marker" size={20} color="#10b981" />
-                  <Text style={styles.infoLabel}>መገኛ</Text>
-                  <Text style={styles.infoValue}>{product.location || 'የለም'}</Text>
+                  <Text style={styles.infoLabel}>{t('location', 'addProduct')}</Text>
+                  <Text style={styles.infoValue}>{product.location || t('none', 'common')}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.infoCard}
-                  onPress={() => handleEdit('supplier_id', product.supplier_id, 'አቅራቢ')}
+                  onPress={() => handleEdit('supplier_id', product.supplier_id, t('supplierId', 'addProduct'))}
                 >
                   <MaterialCommunityIcons name="truck" size={20} color="#10b981" />
-                  <Text style={styles.infoLabel}>አቅራቢ</Text>
-                  <Text style={styles.infoValue}>{product.supplier_id || 'የለም'}</Text>
+                  <Text style={styles.infoLabel}>{t('supplierId', 'addProduct')}</Text>
+                  <Text style={styles.infoValue}>{product.supplier_id || t('none', 'common')}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
                 </TouchableOpacity>
               </View>
@@ -507,14 +506,14 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
             {/* Unit */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>መለኪያ</Text>
+              <Text style={styles.sectionTitle}>{t('unit', 'addProduct')}</Text>
               <TouchableOpacity 
                 style={styles.fullWidthCard}
-                onPress={() => handleEdit('unit', product.unit, 'መለኪያ')}
+                onPress={() => handleEdit('unit', product.unit, t('unit', 'addProduct'))}
               >
                 <MaterialCommunityIcons name="scale" size={20} color="#10b981" />
                 <View style={styles.fullWidthContent}>
-                  <Text style={styles.fullWidthLabel}>መለኪያ</Text>
+                  <Text style={styles.fullWidthLabel}>{t('unit', 'addProduct')}</Text>
                   <Text style={styles.fullWidthValue}>{product.unit}</Text>
                 </View>
                 <MaterialCommunityIcons name="pencil" size={18} color="#64748b" />
@@ -525,8 +524,8 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
             {product.description && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>መግለጫ</Text>
-                  <TouchableOpacity onPress={() => handleEdit('description', product.description, 'መግለጫ')}>
+                  <Text style={styles.sectionTitle}>{t('description', 'addProduct')}</Text>
+                  <TouchableOpacity onPress={() => handleEdit('description', product.description, t('description', 'addProduct'))}>
                     <MaterialCommunityIcons name="pencil" size={18} color="#64748b" />
                   </TouchableOpacity>
                 </View>
@@ -541,14 +540,14 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
           <View style={styles.tabContent}>
             {/* Current Stock */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>አሁን ያለ ክምችት</Text>
+              <Text style={styles.sectionTitle}>{t('totalStock', 'addProduct')}</Text>
               <TouchableOpacity 
                 style={styles.stockCard}
-                onPress={() => handleEdit('total_stock', product.total_stock, 'አጠቃላይ ክምችት')}
+                onPress={() => handleEdit('total_stock', product.total_stock, t('totalStock', 'addProduct'))}
               >
                 <MaterialCommunityIcons name="package-variant" size={24} color="#10b981" />
                 <View style={styles.stockCardContent}>
-                  <Text style={styles.stockLabel}>አጠቃላይ ክምችት</Text>
+                  <Text style={styles.stockLabel}>{t('totalStock', 'addProduct')}</Text>
                   <Text style={styles.stockValue}>{product.total_stock} {product.unit}</Text>
                 </View>
                 <MaterialCommunityIcons name="pencil" size={20} color="#64748b" />
@@ -557,13 +556,13 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
             {/* Stock Limits */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>የክምችት ገደቦች</Text>
+              <Text style={styles.sectionTitle}>{t('stockLimits', 'common')}</Text>
               <View style={styles.limitsContainer}>
                 <TouchableOpacity 
                   style={styles.limitCard}
-                  onPress={() => handleEdit('min_stock', product.min_stock, 'ዝቅተኛ ክምችት')}
+                  onPress={() => handleEdit('min_stock', product.min_stock, t('minStock', 'addProduct'))}
                 >
-                  <Text style={styles.limitLabel}>ዝቅተኛ</Text>
+                  <Text style={styles.limitLabel}>{t('minStock', 'addProduct')}</Text>
                   <Text style={styles.limitValue}>{product.min_stock}</Text>
                   <Text style={styles.limitUnit}>{product.unit}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
@@ -571,9 +570,9 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                 
                 <TouchableOpacity 
                   style={styles.limitCard}
-                  onPress={() => handleEdit('max_stock', product.max_stock, 'ከፍተኛ ክምችት')}
+                  onPress={() => handleEdit('max_stock', product.max_stock, t('maxStock', 'addProduct'))}
                 >
-                  <Text style={styles.limitLabel}>ከፍተኛ</Text>
+                  <Text style={styles.limitLabel}>{t('maxStock', 'addProduct')}</Text>
                   <Text style={styles.limitValue}>{product.max_stock}</Text>
                   <Text style={styles.limitUnit}>{product.unit}</Text>
                   <MaterialCommunityIcons name="pencil" size={14} color="#64748b" style={styles.editIcon} />
@@ -583,12 +582,12 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
             {/* Stock Movement */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>የክምችት እንቅስቃሴ</Text>
+              <Text style={styles.sectionTitle}>{t('stockMovement', 'common')}</Text>
               <View style={styles.movementContainer}>
                 <View style={styles.movementCard}>
                   <MaterialCommunityIcons name="package-up" size={20} color="#10b981" />
                   <View>
-                    <Text style={styles.movementLabel}>አዲስ የደረሰ</Text>
+                    <Text style={styles.movementLabel}>{t('newArrival', 'addProduct')}</Text>
                     <Text style={styles.movementValue}>{product.new_arrival_quantity} {product.unit}</Text>
                   </View>
                 </View>
@@ -596,7 +595,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                 <View style={styles.movementCard}>
                   <MaterialCommunityIcons name="cart" size={20} color="#f59e0b" />
                   <View>
-                    <Text style={styles.movementLabel}>የተሸጠ</Text>
+                    <Text style={styles.movementLabel}>{t('soldQuantity', 'addProduct')}</Text>
                     <Text style={styles.movementValue}>{product.selling_quantity} {product.unit}</Text>
                   </View>
                 </View>
@@ -610,28 +609,28 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
           <View style={styles.tabContent}>
             {/* Prices */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>ዋጋዎች</Text>
+              <Text style={styles.sectionTitle}>{t('pricing', 'addProduct')}</Text>
               
               <TouchableOpacity 
                 style={styles.priceCard}
-                onPress={() => handleEdit('buying_price', product.buying_price, 'የግዢ ዋጋ')}
+                onPress={() => handleEdit('buying_price', product.buying_price, t('buyingPrice', 'addProduct'))}
               >
                 <MaterialCommunityIcons name="cash" size={20} color="#64748b" />
                 <View style={styles.priceCardContent}>
-                  <Text style={styles.priceLabel}>የግዢ ዋጋ</Text>
-                  <Text style={styles.buyingPrice}>{product.buying_price} ብር</Text>
+                  <Text style={styles.priceLabel}>{t('buyingPrice', 'addProduct')}</Text>
+                  <Text style={styles.buyingPrice}>{product.buying_price} {t('currency', 'common')}</Text>
                 </View>
                 <MaterialCommunityIcons name="pencil" size={18} color="#64748b" />
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.priceCard}
-                onPress={() => handleEdit('selling_price', product.selling_price, 'የሽያጭ ዋጋ')}
+                onPress={() => handleEdit('selling_price', product.selling_price, t('sellingPrice', 'addProduct'))}
               >
                 <MaterialCommunityIcons name="cash-multiple" size={20} color="#10b981" />
                 <View style={styles.priceCardContent}>
-                  <Text style={styles.priceLabel}>የሽያጭ ዋጋ</Text>
-                  <Text style={styles.sellingPrice}>{product.selling_price} ብር</Text>
+                  <Text style={styles.priceLabel}>{t('sellingPrice', 'addProduct')}</Text>
+                  <Text style={styles.sellingPrice}>{product.selling_price} {t('currency', 'common')}</Text>
                 </View>
                 <MaterialCommunityIcons name="pencil" size={18} color="#64748b" />
               </TouchableOpacity>
@@ -639,15 +638,15 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
             {/* Profit */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>ትርፍ</Text>
+              <Text style={styles.sectionTitle}>{t('profit', 'addProduct')}</Text>
               <View style={styles.profitCard}>
                 <View style={styles.profitRow}>
-                  <Text style={styles.profitLabel}>ትርፍ በአንዱ</Text>
-                  <Text style={styles.profitValue}>{product.selling_price - product.buying_price} ብር</Text>
+                  <Text style={styles.profitLabel}>{t('profitPerUnit', 'common')}</Text>
+                  <Text style={styles.profitValue}>{product.selling_price - product.buying_price} {t('currency', 'common')}</Text>
                 </View>
                 <View style={styles.profitRow}>
-                  <Text style={styles.profitLabel}>ጠቅላላ ትርፍ</Text>
-                  <Text style={styles.profitTotal}>{product.profit} ብር</Text>
+                  <Text style={styles.profitLabel}>{t('totalProfit', 'common')}</Text>
+                  <Text style={styles.profitTotal}>{product.profit} {t('currency', 'common')}</Text>
                 </View>
                 <View style={styles.progressBar}>
                   <View 
@@ -661,7 +660,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                   />
                 </View>
                 <Text style={styles.marginText}>
-                  {((product.selling_price - product.buying_price) / product.buying_price * 100).toFixed(1)}% ትርፍ
+                  {((product.selling_price - product.buying_price) / product.buying_price * 100).toFixed(1)}% {t('profitMargin', 'common')}
                 </Text>
               </View>
             </View>
@@ -670,9 +669,9 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
 
         {/* Footer with timestamps */}
         <View style={styles.footer}>
-          <Text style={styles.timestamp}>መለያ ቁጥር: {product.id}</Text>
-          <Text style={styles.timestamp}>የተፈጠረ: {formatDate(product.created_at)}</Text>
-          <Text style={styles.timestamp}>የተሻሻለ: {formatDate(product.updated_at)}</Text>
+          <Text style={styles.timestamp}>{t('id', 'common')}: {product.id}</Text>
+          <Text style={styles.timestamp}>{t('created', 'common')}: {formatDate(product.created_at)}</Text>
+          <Text style={styles.timestamp}>{t('updated', 'common')}: {formatDate(product.updated_at)}</Text>
         </View>
 
       </ScrollView>
@@ -687,9 +686,9 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>ምርት ሰርዝ?</Text>
+            <Text style={styles.modalTitle}>{t('deleteConfirmTitle', 'common')}</Text>
             <Text style={styles.modalText}>
-              "{product.product_name}" የሚል ምርት መሰረዝ ይፈልጋሉ? ይህ ድርጊት ሊቀለበስ አይችልም።
+              {t('deleteConfirmMessage', 'common')} "{product.product_name}"?
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -697,7 +696,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                 onPress={() => setShowDeleteModal(false)}
                 disabled={deleteLoading}
               >
-                <Text style={styles.cancelButtonText}>አይ, ይቅር</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmDeleteButton]}
@@ -707,7 +706,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                 {deleteLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.confirmDeleteText}>አዎ, ሰርዝ</Text>
+                  <Text style={styles.confirmDeleteText}>{t('delete', 'common')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -725,7 +724,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
         <View style={styles.modalContainer}>
           <View style={styles.editModalContent}>
             <Text style={styles.editModalTitle}>
-              {editingField?.label} አርትዕ
+              {t('edit', 'common')} {editingField?.label}
             </Text>
             
             <TextInput
@@ -740,7 +739,7 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
               }
               multiline={editingField?.field === 'description'}
               numberOfLines={editingField?.field === 'description' ? 4 : 1}
-              placeholder={`አዲስ ዋጋ ያስገቡ`}
+              placeholder={`${t('enter', 'common')} ${editingField?.label}`}
               placeholderTextColor="#64748b"
               autoFocus={true}
             />
@@ -753,17 +752,17 @@ ${product.description ? `\n📝 መግለጫ:\n${product.description}` : ''}
                   setEditingField(null);
                 }}
               >
-                <Text style={styles.cancelButtonText}>ሰርዝ</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={saveEdit}
               >
-                <Text style={styles.saveButtonText}>አስቀምጥ</Text>
+                <Text style={styles.saveButtonText}>{t('save', 'common')}</Text>
               </TouchableOpacity>
             </View>
           </View>
-             <View style={{ height: 100 }} />
+          <View style={{ height: 100 }} />
         </View>
       </Modal>
     </LinearGradient>

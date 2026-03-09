@@ -13,13 +13,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Dimensions
 } from 'react-native';
 import api from '../lib/api';
-// import storage from './lib/storage'; // Uncomment if needed
+import { useLanguage } from '../../context/LanguageContext';
+
+const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -31,37 +35,35 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-  // ... rest of your existing code remains the same
-
   const validateForm = () => {
     if (!fullName || !username || !email || !password || !confirmPassword) {
-      Alert.alert('ስህተት', 'እባክዎ ሁሉንም መስኮች ይሙሉ');
+      Alert.alert(t('error'), t('fillAllFields', 'auth'));
       return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('ስህተት', 'የይለፍ ቃላት አይዛመዱም');
+      Alert.alert(t('error'), t('passwordMismatch', 'auth'));
       return false;
     }
 
     if (password.length < 6) {
-      Alert.alert('ስህተት', 'የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት');
+      Alert.alert(t('error'), t('passwordLength', 'auth'));
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('ስህተት', 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ');
+      Alert.alert(t('error'), t('validEmail', 'auth'));
       return false;
     }
 
     if (phone && !/^[0-9+\-\s()]{7,20}$/.test(phone)) {
-      Alert.alert('ስህተት', 'የስልክ ቁጥር ቅርጸት ትክክል አይደለም');
+      Alert.alert(t('error'), t('validPhone', 'auth'));
       return false;
     }
 
     if (!agreeToTerms) {
-      Alert.alert('ስህተት', 'ለመቀጠል ውሎችን መቀበል አለብዎት');
+      Alert.alert(t('error'), t('agreeTermsRequired', 'auth'));
       return false;
     }
 
@@ -79,44 +81,44 @@ export default function RegisterScreen() {
         email: email.trim().toLowerCase(),
         phone: phone.trim() || '',
         password: password,
-              });
+      });
 
       console.log('Registration response:', response.data);
 
       if (response.data.status === 'success') {
         Alert.alert(
-          'ተሳክቷል',
-          'መለያዎ በተሳካ ሁኔታ ተፈጥሯል። እባክዎ ይግቡ',
+          t('success'),
+          t('registrationSuccess', 'auth'),
           [
             {
-              text: 'ወደ መግቢያ ይሂዱ',
+              text: t('goToLogin', 'auth'),
               onPress: () => router.push('./login')
             }
           ]
         );
       } else {
-        Alert.alert('ስህተት', response.data.message || 'ምዝገባ አልተሳካም');
+        Alert.alert(t('error'), response.data.message || t('registrationFailed', 'auth'));
       }
     } catch (error: any) {
       console.log('Registration error:', error.response || error);
       
-      let message = 'እባክዎ እንደገና ይሞክሩ';
+      let message = t('tryAgain', 'common');
       if (error.response) {
         message = error.response.data?.message || message;
         
         // Handle duplicate entry errors
         if (error.response.status === 409) {
-          if (message.includes('Username')) {
-            message = 'ይህ የተጠቃሚ ስም አስቀድሞ ተመዝግቧል';
-          } else if (message.includes('Email')) {
-            message = 'ይህ ኢሜይል አስቀድሞ ተመዝግቧል';
+          if (message.toLowerCase().includes('username')) {
+            message = t('usernameExists', 'auth');
+          } else if (message.toLowerCase().includes('email')) {
+            message = t('emailExists', 'auth');
           }
         }
       } else if (error.request) {
-        message = 'ከአገልጋይ ጋር መገናኘት አልተቻለም። ኢንተርኔትዎን ያረጋግጡ';
+        message = t('connectionError', 'common');
       }
       
-      Alert.alert('ስህተት', message);
+      Alert.alert(t('error'), message);
     } finally {
       setLoading(false);
     }
@@ -149,77 +151,68 @@ export default function RegisterScreen() {
             >
               <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>መለያ ፍጠር</Text>
+            <Text style={styles.headerTitle}>{t('createAccount', 'auth')}</Text>
             <View style={styles.headerSpacer} />
           </View>
 
-          {/* Hero Image Section */}
-          <View style={styles.heroContainer}>
-            <LinearGradient
-              colors={['rgba(41, 116, 255, 0.2)', 'rgba(15, 22, 35, 0.95)']}
-              style={styles.heroGradient}
-            >
-              <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>Join AutoParts Pro</Text>
-                <Text style={styles.heroSubtitle}>Scale your automotive business today.</Text>
-                <View style={styles.ethiopianBadge}>
-                  <Text style={styles.ethiopianBadgeText}>ለኢትዮጵያ ንግድ የተበጀ</Text>
-                </View>
-              </View>
-            </LinearGradient>
+          {/* Simple Hero */}
+          <View style={styles.simpleHero}>
+            <Text style={styles.simpleHeroTitle}>AutoParts Pro</Text>
+            <Text style={styles.simpleHeroSubtitle}>{t('ethiopianBadge', 'auth')}</Text>
           </View>
 
           {/* Form Container */}
           <View style={styles.formContainer}>
             <Text style={styles.formDescription}>
-              መደብርዎን ለመመዝገብ እና እቃዎችን በብቃት ለማስተዳደር ይጀምሩ
+              {t('formDescription', 'auth')}
             </Text>
 
-            {/* Full Name Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>ሙሉ ስም</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="account-outline"
-                  size={20}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="አበበ በቀለ"
-                  placeholderTextColor="#64748b"
-                  value={fullName}
-                  onChangeText={setFullName}
-                />
+            {/* Row 1: Full Name & Username */}
+            <View style={styles.row}>
+              <View style={[styles.inputWrapper, styles.halfWidth]}>
+                <Text style={styles.label}>{t('fullName', 'auth')}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="account-outline"
+                    size={20}
+                    color="#64748b"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('fullNamePlaceholder', 'auth')}
+                    placeholderTextColor="#64748b"
+                    value={fullName}
+                    onChangeText={setFullName}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.inputWrapper, styles.halfWidth]}>
+                <Text style={styles.label}>{t('username', 'auth')}</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialCommunityIcons
+                    name="at"
+                    size={20}
+                    color="#64748b"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('usernamePlaceholder', 'auth')}
+                    placeholderTextColor="#64748b"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={username}
+                    onChangeText={setUsername}
+                  />
+                </View>
               </View>
             </View>
 
-            {/* Username Input */}
+            {/* Email Input - Full Width */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>የተጠቃሚ ስም</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="at"
-                  size={20}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="username"
-                  placeholderTextColor="#64748b"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={username}
-                  onChangeText={setUsername}
-                />
-              </View>
-            </View>
-
-            {/* Email Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>ኢሜይል</Text>
+              <Text style={styles.label}>{t('email', 'common')}</Text>
               <View style={styles.inputContainer}>
                 <MaterialCommunityIcons
                   name="email-outline"
@@ -229,7 +222,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="name@company.com"
+                  placeholder={t('emailPlaceholder', 'auth')}
                   placeholderTextColor="#64748b"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -240,9 +233,9 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Phone Input (Optional) */}
+            {/* Phone Input - Full Width */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>ስልክ ቁጥር (አማራጭ)</Text>
+              <Text style={styles.label}>{t('phone', 'auth')}</Text>
               <View style={styles.inputContainer}>
                 <MaterialCommunityIcons
                   name="phone-outline"
@@ -252,7 +245,7 @@ export default function RegisterScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="+251 911 234 567"
+                  placeholder={t('phonePlaceholder', 'auth')}
                   placeholderTextColor="#64748b"
                   keyboardType="phone-pad"
                   value={phone}
@@ -261,66 +254,67 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>የይለፍ ቃል</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="lock-outline"
-                  size={20}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="#64748b"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
+            {/* Row 3: Password & Confirm Password */}
+            <View style={styles.row}>
+              <View style={[styles.inputWrapper, styles.halfWidth]}>
+                <Text style={styles.label}>{t('password', 'common')}</Text>
+                <View style={styles.inputContainer}>
                   <MaterialCommunityIcons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name="lock-outline"
                     size={20}
                     color="#64748b"
+                    style={styles.inputIcon}
                   />
-                </TouchableOpacity>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor="#64748b"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <MaterialCommunityIcons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#64748b"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.passwordHint}>{t('passwordHint', 'auth')}</Text>
               </View>
-              <Text style={styles.passwordHint}>ቢያንስ 6 ቁምፊዎች</Text>
-            </View>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>የይለፍ ቃል ድገም</Text>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="lock-check-outline"
-                  size={20}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="#64748b"
-                  secureTextEntry={!showConfirmPassword}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
-                >
+              <View style={[styles.inputWrapper, styles.halfWidth]}>
+                <Text style={styles.label}>{t('confirmPassword', 'auth')}</Text>
+                <View style={styles.inputContainer}>
                   <MaterialCommunityIcons
-                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                    name="lock-check-outline"
                     size={20}
                     color="#64748b"
+                    style={styles.inputIcon}
                   />
-                </TouchableOpacity>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor="#64748b"
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <MaterialCommunityIcons
+                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#64748b"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -335,7 +329,7 @@ export default function RegisterScreen() {
                 )}
               </View>
               <Text style={styles.termsText}>
-                የአገልግሎት ውል እና የግላዊነት መመሪያዎችን ተቀበልኩ
+                {t('agreeTerms', 'auth')}
               </Text>
             </TouchableOpacity>
 
@@ -349,7 +343,7 @@ export default function RegisterScreen() {
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <>
-                  <Text style={styles.registerButtonText}>መለያ ፍጠር</Text>
+                  <Text style={styles.registerButtonText}>{t('createAccount', 'auth')}</Text>
                   <MaterialCommunityIcons
                     name="arrow-right"
                     size={20}
@@ -361,19 +355,16 @@ export default function RegisterScreen() {
 
             {/* Login Link */}
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>ቀድሞውንም መለያ አለዎት? </Text>
+              <Text style={styles.loginText}>{t('haveAccount', 'auth')} </Text>
               <TouchableOpacity onPress={() => router.push('./login')}>
-                <Text style={styles.loginLink}>ወደ መግቢያ ይሂዱ</Text>
+                <Text style={styles.loginLink}>{t('goToLogin', 'auth')}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Footer Terms */}
             <Text style={styles.footerText}>
-              በመመዝገብ፣ የአገልግሎት ውል እና የግላዊነት መመሪያዎችን ተቀብለዋል
+              {t('footerTerms', 'auth')}
             </Text>
-
-            {/* Version */}
-           
           </View>
         </ScrollView>
       </LinearGradient>
@@ -437,41 +428,20 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44,
   },
-  heroContainer: {
-    height: 200,
-    marginHorizontal: 16,
+  simpleHero: {
+    alignItems: 'center',
     marginBottom: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
+    paddingHorizontal: 20,
   },
-  heroGradient: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    padding: 20,
-  },
-  heroContent: {
-    gap: 8,
-  },
-  heroTitle: {
+  simpleHeroTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#ffffff',
+    marginBottom: 4,
   },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#cbd5e1',
-  },
-  ethiopianBadge: {
-    backgroundColor: 'rgba(41, 116, 255, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  ethiopianBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
+  simpleHeroSubtitle: {
+    fontSize: 14,
+    color: '#2974ff',
     fontWeight: '600',
   },
   formContainer: {
@@ -483,56 +453,64 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   inputWrapper: {
     marginBottom: 16,
   },
+  halfWidth: {
+    flex: 1,
+  },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#cbd5e1',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(15, 22, 35, 0.6)',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    height: 56,
+    height: 48,
   },
   inputIcon: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   input: {
     flex: 1,
     height: '100%',
     color: '#ffffff',
-    fontSize: 16,
-    paddingRight: 12,
+    fontSize: 14,
+    paddingRight: 10,
   },
   eyeIcon: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   passwordHint: {
     color: '#64748b',
-    fontSize: 12,
+    fontSize: 10,
     marginTop: 4,
     marginLeft: 4,
   },
   termsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     marginTop: 8,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 5,
     borderWidth: 2,
     borderColor: '#475569',
-    marginRight: 12,
+    marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -542,57 +520,50 @@ const styles = StyleSheet.create({
   },
   termsText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     color: '#94a3b8',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   registerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2974ff',
-    height: 56,
-    borderRadius: 12,
+    height: 50,
+    borderRadius: 10,
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#2974ff',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 8,
+    elevation: 5,
   },
   registerButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   loginText: {
     color: '#94a3b8',
-    fontSize: 16,
+    fontSize: 14,
   },
   loginLink: {
     color: '#2974ff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   footerText: {
     color: '#64748b',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 18,
-  },
-  versionText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    letterSpacing: 1,
+    lineHeight: 16,
   },
 });

@@ -19,10 +19,12 @@ import api from '../lib/api';
 import storage from '../lib/storage';
 import React from 'react';
 import { Linking } from 'react-native';
-
+import { useLanguage } from '../../context/LanguageContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('ስህተት', 'ኢሜይል እና የይለፍ ቃል ያስፈልጋል');
+      Alert.alert(t('error'), t('emailPasswordRequired', 'auth'));
       return;
     }
 
@@ -59,39 +61,37 @@ export default function LoginScreen() {
       const response = await api.post('/login', { email, password });
       console.log('Login response:', response.data);
 
-if (response.data.status === 'success') {
-  const token = response.data.data?.token || response.data.token;
+      if (response.data.status === 'success') {
+        const token = response.data.data?.token || response.data.token;
 
-  if (!token) {
-    Alert.alert('የተሳሳተ መግቢያ', 'ቶከን አልተገኘም');
-    setLoading(false);
-    return;
-  }
+        if (!token) {
+          Alert.alert(t('error'), t('tokenNotFound', 'auth'));
+          setLoading(false);
+          return;
+        }
 
-  const tokenSaved = await storage.setItem('authToken', token);
+        const tokenSaved = await storage.setItem('authToken', token);
 
-  console.log("Token to save:", token);
-  console.log("Token saved result:", tokenSaved);
+        console.log("Token to save:", token);
+        console.log("Token saved result:", tokenSaved);
 
-  const storedToken = await storage.getItem('authToken');
-  console.log("Token after save check:", storedToken);
+        const storedToken = await storage.getItem('authToken');
+        console.log("Token after save check:", storedToken);
 
-  if (rememberMe) {
-    await storage.setItem('rememberedEmail', email);
-  } else {
-    await storage.removeItem('rememberedEmail');
-  }
+        if (rememberMe) {
+          await storage.setItem('rememberedEmail', email);
+        } else {
+          await storage.removeItem('rememberedEmail');
+        }
 
-  router.replace('/(tab)');
-}
-
-else {
-        Alert.alert('የተሳሳተ መግቢያ', 'እባክዎ ኢሜይል እና የይለፍ ቃልዎን ያረጋግጡ');
+        router.replace('/(tab)');
+      } else {
+        Alert.alert(t('error'), t('invalidCredentials', 'auth'));
       }
     } catch (error: any) {
       console.log('Login error:', error.response || error);
-      const message = error.response?.data?.message || error.message || 'እባክዎ እንደገና ይሞክሩ';
-      Alert.alert('የተሳሳተ መግቢያ', message);
+      const message = error.response?.data?.message || error.message || t('tryAgain', 'common');
+      Alert.alert(t('error'), message);
     } finally {
       setLoading(false);
     }
@@ -125,14 +125,23 @@ else {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
- 
+          {/* Header with Language Switcher */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <LanguageSwitcher />
+          </View>
 
           {/* Welcome Text */}
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeTitle}>እንኳን ደህና መጡ</Text>
-            <Text style={styles.welcomeSubtitle}>Welcome Back</Text>
+            <Text style={styles.welcomeTitle}>{t('welcome', 'auth')}</Text>
+            <Text style={styles.welcomeSubtitle}>{t('welcomeBack', 'auth')}</Text>
             <Text style={styles.description}>
-              የእቃ ክምችትዎን ለማስተዳደር ይግቡ
+              {t('loginDescription', 'auth')}
             </Text>
           </View>
 
@@ -140,7 +149,7 @@ else {
           <View style={styles.formContainer}>
             {/* Email Input */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>ኢሜይል</Text>
+              <Text style={styles.label}>{t('email', 'common')}</Text>
               <View style={styles.inputContainer}>
                 <MaterialCommunityIcons 
                   name="email-outline" 
@@ -163,9 +172,9 @@ else {
             {/* Password Input */}
             <View style={styles.inputWrapper}>
               <View style={styles.passwordHeader}>
-                <Text style={styles.label}>የይለፍ ቃል</Text>
-                <TouchableOpacity onPress={() => Alert.alert('መለሳ', 'እስካሁን አልተዘጋጀም')}>
-                  <Text style={styles.forgotPassword}>ፓስዎርድ ረሳሁ?</Text>
+                <Text style={styles.label}>{t('password', 'common')}</Text>
+                <TouchableOpacity onPress={() => Alert.alert(t('forgotPassword', 'auth'), t('comingSoon', 'common'))}>
+                  <Text style={styles.forgotPassword}>{t('forgotPassword', 'auth')}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.inputContainer}>
@@ -206,7 +215,7 @@ else {
                   <MaterialCommunityIcons name="check" size={14} color="#ffffff" />
                 )}
               </View>
-              <Text style={styles.rememberText}>ይህን መሣሪያ አስታውስ</Text>
+              <Text style={styles.rememberText}>{t('rememberMe', 'auth')}</Text>
             </TouchableOpacity>
 
             {/* Sign In Button */}
@@ -219,7 +228,7 @@ else {
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <>
-                  <Text style={styles.signInButtonText}>ግባ</Text>
+                  <Text style={styles.signInButtonText}>{t('login', 'auth')}</Text>
                   <MaterialCommunityIcons 
                     name="login" 
                     size={20} 
@@ -232,7 +241,7 @@ else {
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ለመጀመሪያ ጊዜ ነው?</Text>
+              <Text style={styles.dividerText}>{t('newUser', 'auth')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -242,38 +251,36 @@ else {
               onPress={() => router.push('/auth/register')}
             >
               <Text style={styles.createAccountButtonText}>
-                አዲስ መለያ ፍጠር
+                {t('createAccount', 'auth')}
               </Text>
             </TouchableOpacity>
 
-            {/* Footer Links */}
-                 <View style={styles.footer}>
-                      <TouchableOpacity
-                        style={styles.socialBtn}
-                        onPress={() => Linking.openURL('https://t.me/specificautopart')}
-                      >
-                        <MaterialCommunityIcons name="near-me" size={22} color="#0088cc" />
-                        <Text style={styles.socialText}>Telegram</Text>
-                      </TouchableOpacity>
+            {/* Social Media Links */}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={() => Linking.openURL('https://t.me/specificautopart')}
+              >
+                <MaterialCommunityIcons name="near-me" size={22} color="#0088cc" />
+                <Text style={styles.socialText}>Telegram</Text>
+              </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.socialBtn}
-                        onPress={() => Linking.openURL('https://www.tiktok.com/@specificethiopia')}
-                      >
-                        <MaterialCommunityIcons name="music-note" size={22} color="#000" />
-                        <Text style={styles.socialText}>TikTok</Text>
-                      </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={() => Linking.openURL('https://www.tiktok.com/@specificethiopia')}
+              >
+                <MaterialCommunityIcons name="music-note" size={22} color="#000" />
+                <Text style={styles.socialText}>TikTok</Text>
+              </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.socialBtn}
-                        onPress={() => Linking.openURL('https://facebook.com/specificethiopia')}
-                      >
-                        <MaterialCommunityIcons name="facebook" size={22} color="#1877F2" />
-                        <Text style={styles.socialText}>Facebook</Text>
-                      </TouchableOpacity>
-                    </View>
-
-        
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={() => Linking.openURL('https://facebook.com/specificethiopia')}
+              >
+                <MaterialCommunityIcons name="facebook" size={22} color="#1877F2" />
+                <Text style={styles.socialText}>Facebook</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -299,6 +306,12 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   backButton: {
     width: 44,
     height: 44,
@@ -306,7 +319,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
   },
   blurCircle1: {
     position: 'absolute',
@@ -328,24 +340,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(41, 116, 255, 0.1)',
     transform: [{ scale: 1.5 }],
   },
-
-
-
-
-
-
-
-socialBtn: {
-  padding: 10,
-},
-socialText: {
-  fontSize: 12,
-  marginTop: 4,
-  color: '#666',
-},
-
-
-
+  socialBtn: {
+    padding: 10,
+  },
+  socialText: {
+    fontSize: 12,
+    marginTop: 4,
+    color: '#666',
+  },
   welcomeContainer: {
     marginBottom: 30,
   },

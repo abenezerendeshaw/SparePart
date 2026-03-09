@@ -17,6 +17,7 @@ import Animated, {
   Extrapolate,
   withSpring,
 } from 'react-native-reanimated';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 interface Product {
@@ -32,6 +33,7 @@ interface Product {
 
 export default function InventoryScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,7 +44,6 @@ export default function InventoryScreen() {
   // Animation values
   const scrollY = useSharedValue(0);
   const headerOpacity = useSharedValue(1);
-
 
   const HEADER_MAX_HEIGHT = 120;
   const HEADER_MIN_HEIGHT = 70;
@@ -108,7 +109,7 @@ export default function InventoryScreen() {
 
     } catch (error) {
       console.error('Error fetching inventory:', error);
-      Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
+      Alert.alert(t('error'), t('dataLoadFailed', 'common'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -151,9 +152,9 @@ export default function InventoryScreen() {
 
     const getStatusText = () => {
       switch(stockStatus) {
-        case 'out': return 'አልቀረም';
-        case 'low': return 'ዝቅተኛ';
-        default: return 'በቂ';
+        case 'out': return t('outOfStock', 'common');
+        case 'low': return t('low', 'common');
+        default: return t('sufficient', 'inventory');
       }
     };
 
@@ -193,14 +194,14 @@ export default function InventoryScreen() {
             <View style={styles.stockDetailItem}>
               <MaterialCommunityIcons name="currency-usd" size={16} color="#94a3b8" />
               <Text style={styles.stockDetailText}>
-                ETB {Number(item.selling_price).toLocaleString()}
+                {t('currency', 'common')} {Number(item.selling_price).toLocaleString()}
               </Text>
             </View>
 
             <View style={styles.stockDetailItem}>
               <MaterialCommunityIcons name="tag" size={16} color="#94a3b8" />
               <Text style={styles.stockDetailText}>
-                {item.category || 'ሌሎች'}
+                {item.category || t('other', 'common')}
               </Text>
             </View>
           </View>
@@ -208,7 +209,7 @@ export default function InventoryScreen() {
 
         <View style={styles.cardFooter}>
           <Text style={styles.stockValue}>
-            ዋጋ: ETB {(stockLevel * Number(item.selling_price)).toLocaleString()}
+            {t('totalValue', 'inventory')}: {t('currency', 'common')} {(stockLevel * Number(item.selling_price)).toLocaleString()}
           </Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color="#64748b" />
         </View>
@@ -221,7 +222,7 @@ export default function InventoryScreen() {
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>ክምችት በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -239,17 +240,17 @@ export default function InventoryScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>ክምችት አስተዳደር</Text>
+        <Text style={styles.headerTitle}>{t('inventoryManagement', 'inventory')}</Text>
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => {
             Alert.alert(
-              'ማጣሪያ',
-              'ምድብ ይምረጡ',
+              t('filter', 'common'),
+              t('selectCategory', 'inventory'),
               categories.map(cat => ({
-                text: cat === 'all' ? 'ሁሉም' : cat,
+                text: cat === 'all' ? t('all', 'common') : cat,
                 onPress: () => setSelectedCategory(cat),
-              })).concat([{ text: 'ተይ', style: 'cancel' }])
+              })).concat([{ text: t('cancel', 'common'), style: 'cancel' }])
             );
           }}
         >
@@ -277,7 +278,7 @@ export default function InventoryScreen() {
             <MaterialCommunityIcons name="magnify" size={20} color="#64748b" />
             <TextInput
               style={styles.searchInput}
-              placeholder="ምርት ፈልግ..."
+              placeholder={t('searchProduct', 'inventory')}
               placeholderTextColor="#64748b"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -297,7 +298,7 @@ export default function InventoryScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statCardValue}>{totalStock}</Text>
-            <Text style={styles.statCardLabel}>አጠቃላይ ክምችት</Text>
+            <Text style={styles.statCardLabel}>{t('totalStock', 'inventory')}</Text>
           </LinearGradient>
 
           <LinearGradient
@@ -305,7 +306,7 @@ export default function InventoryScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statCardValue}>{lowStockItems.length}</Text>
-            <Text style={styles.statCardLabel}>ዝቅተኛ ክምችት</Text>
+            <Text style={styles.statCardLabel}>{t('lowStock', 'inventory')}</Text>
           </LinearGradient>
 
           <LinearGradient
@@ -313,15 +314,15 @@ export default function InventoryScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statCardValue}>{outOfStockItems.length}</Text>
-            <Text style={styles.statCardLabel}>ያለቀ</Text>
+            <Text style={styles.statCardLabel}>{t('outOfStock', 'inventory')}</Text>
           </LinearGradient>
 
           <LinearGradient
             colors={['#8b5cf6', '#6d28d9']}
             style={styles.statCard}
           >
-            <Text style={styles.statCardValue}>ETB {totalValue.toLocaleString()}</Text>
-            <Text style={styles.statCardLabel}>አጠቃላይ ዋጋ</Text>
+            <Text style={styles.statCardValue}>{t('currency', 'common')} {totalValue.toLocaleString()}</Text>
+            <Text style={styles.statCardLabel}>{t('totalValue', 'inventory')}</Text>
           </LinearGradient>
         </View>
 
@@ -344,7 +345,7 @@ export default function InventoryScreen() {
                 styles.categoryChipText,
                 selectedCategory === category && styles.selectedCategoryChipText
               ]}>
-                {category === 'all' ? 'ሁሉም' : category}
+                {category === 'all' ? t('all', 'common') : category}
               </Text>
             </TouchableOpacity>
           ))}
@@ -353,13 +354,13 @@ export default function InventoryScreen() {
         {/* Inventory List */}
         <View style={styles.inventoryList}>
           <Text style={styles.listTitle}>
-            {filteredProducts.length} ምርቶች ተገኝተዋል
+            {filteredProducts.length} {t('productsFound', 'inventory')}
           </Text>
 
           {filteredProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="package-variant" size={48} color="#475569" />
-              <Text style={styles.emptyText}>ምንም ምርቶች አልተገኙም</Text>
+              <Text style={styles.emptyText}>{t('noProducts', 'common')}</Text>
             </View>
           ) : (
             filteredProducts.map((item) => (
@@ -378,7 +379,7 @@ export default function InventoryScreen() {
             style={styles.addButtonGradient}
           >
             <MaterialCommunityIcons name="plus" size={20} color="#ffffff" />
-            <Text style={styles.addButtonText}>አዲስ ምርት ጨምር</Text>
+            <Text style={styles.addButtonText}>{t('addProduct', 'addProduct')}</Text>
           </LinearGradient>
         </TouchableOpacity>
 

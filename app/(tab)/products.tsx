@@ -13,6 +13,7 @@ import Animated, {
   Extrapolate,
   withSpring,
 } from 'react-native-reanimated';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ interface Product {
 
 export default function ProductsScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -133,7 +135,7 @@ export default function ProductsScreen() {
 
     } catch (error) {
       console.error('Error fetching products:', error);
-      Alert.alert('ስህተት', 'ዳታ መጫን አልተቻለም');
+      Alert.alert(t('error'), t('dataLoadFailed', 'common'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -188,19 +190,31 @@ export default function ProductsScreen() {
     const isOutOfStock = (item.total_stock || 0) === 0;
     const isDeleting = deleteLoading === item.id;
 
+    const getStockStatus = () => {
+      if (isOutOfStock) return t('outOfStock', 'common');
+      if (isLowStock) return t('low', 'common');
+      return t('available', 'common');
+    };
+
+    const getStatusColor = () => {
+      if (isOutOfStock) return '#ef4444';
+      if (isLowStock) return '#f59e0b';
+      return '#10b981';
+    };
+
     return (
       <TouchableOpacity 
         style={[styles.productCard, isDeleting && styles.deletingCard]}
         onPress={() => router.push(`/(tab)/products/${item.id}`)}
         onLongPress={() => {
           Alert.alert(
-            'የምርት አማራጮች',
+            t('productOptions', 'products'),
             item.product_name,
             [
-              { text: 'አርትዕ', onPress: () => router.push(`/(tab)/products/${item.id}/edit`) },
-              { text: 'ቅዳ', onPress: () => router.push(`/(tab)/products/add?copy=${item.id}`) },
-              { text: 'ሰርዝ', style: 'destructive', onPress: () => confirmDelete(item.id) },
-              { text: 'ተይ', style: 'cancel' }
+              { text: t('edit', 'common'), onPress: () => router.push(`/(tab)/products/${item.id}/edit`) },
+              { text: t('duplicate', 'products'), onPress: () => router.push(`/(tab)/products/add?copy=${item.id}`) },
+              { text: t('delete', 'common'), style: 'destructive', onPress: () => confirmDelete(item.id) },
+              { text: t('cancel', 'common'), style: 'cancel' }
             ]
           );
         }}
@@ -217,13 +231,13 @@ export default function ProductsScreen() {
             </View>
             <View style={[
               styles.statusBadge,
-              { backgroundColor: isOutOfStock ? '#ef444420' : isLowStock ? '#f59e0b20' : '#10b98120' }
+              { backgroundColor: `${getStatusColor()}20` }
             ]}>
               <Text style={[
                 styles.statusText,
-                { color: isOutOfStock ? '#ef4444' : isLowStock ? '#f59e0b' : '#10b981' }
+                { color: getStatusColor() }
               ]}>
-                {isOutOfStock ? 'የለም' : isLowStock ? 'ጥቂት' : 'አለ'}
+                {getStockStatus()}
               </Text>
             </View>
           </View>
@@ -232,21 +246,21 @@ export default function ProductsScreen() {
             <View style={styles.detailRow}>
               <MaterialCommunityIcons name="package-variant" size={16} color="#64748b" />
               <Text style={styles.detailText}>
-                ክምችት: {item.total_stock || 0}
+                {t('stock', 'common')}: {item.total_stock || 0}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <MaterialCommunityIcons name="currency-usd" size={16} color="#64748b" />
               <Text style={styles.detailText}>
-                ዋጋ: ETB {Number(item.selling_price).toLocaleString()}
+                {t('price', 'common')}: {t('currency', 'common')} {Number(item.selling_price).toLocaleString()}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <MaterialCommunityIcons name="tag" size={16} color="#64748b" />
               <Text style={styles.detailText}>
-                {item.category || 'ሌሎች'}
+                {item.category || t('other', 'common')}
               </Text>
             </View>
 
@@ -262,7 +276,7 @@ export default function ProductsScreen() {
 
           <View style={styles.cardFooter}>
             <Text style={styles.stockValue}>
-              ድምር: ETB {((item.total_stock || 0) * Number(item.selling_price)).toLocaleString()}
+              {t('total', 'common')}: {t('currency', 'common')} {((item.total_stock || 0) * Number(item.selling_price)).toLocaleString()}
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#2974ff" />
           </View>
@@ -270,7 +284,7 @@ export default function ProductsScreen() {
           {isDeleting && (
             <View style={styles.deleteOverlay}>
               <ActivityIndicator size="large" color="#ef4444" />
-              <Text style={styles.deleteOverlayText}>እየሰረዘ ነው...</Text>
+              <Text style={styles.deleteOverlayText}>{t('deleting', 'common')}</Text>
             </View>
           )}
         </LinearGradient>
@@ -280,12 +294,12 @@ export default function ProductsScreen() {
 
   const confirmDelete = (id: number) => {
     Alert.alert(
-      'ምርት ሰርዝ',
-      'ይህን ምርት መሰረዝ እንደምትፈልግ እርግጠኛ ነህ? ይህ ድርጊት ሊቀለበስ አይችልም።',
+      t('deleteProduct', 'products'),
+      t('deleteConfirm', 'products'),
       [
-        { text: 'ተይ', style: 'cancel' },
+        { text: t('cancel', 'common'), style: 'cancel' },
         { 
-          text: 'ሰርዝ', 
+          text: t('delete', 'common'), 
           style: 'destructive',
           onPress: () => deleteProduct(id)
         }
@@ -325,7 +339,7 @@ export default function ProductsScreen() {
         // Also filter it out from the products array
         setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
         
-        Alert.alert('ተሳክቷል', 'ምርት በተሳካ ሁኔታ ተሰርዟል');
+        Alert.alert(t('success'), t('productDeleted', 'products'));
         
         // Refresh from server after a short delay to ensure sync
         setTimeout(() => {
@@ -337,14 +351,14 @@ export default function ProductsScreen() {
     } catch (error: any) {
       console.error('Delete error:', error);
       
-      let errorMessage = 'ምርት መሰረዝ አልተሳካም';
+      let errorMessage = t('deleteFailed', 'products');
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      Alert.alert('ስህተት', errorMessage);
+      Alert.alert(t('error'), errorMessage);
       
       // Remove loading state
       setDeleteLoading(null);
@@ -367,7 +381,7 @@ export default function ProductsScreen() {
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2974ff" />
-          <Text style={styles.loadingText}>ምርቶች በመጫን ላይ...</Text>
+          <Text style={styles.loadingText}>{t('loading', 'common')}</Text>
         </View>
       </LinearGradient>
     );
@@ -385,7 +399,7 @@ export default function ProductsScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>ምርቶች</Text>
+        <Text style={styles.headerTitle}>{t('products', 'navigation')}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/(tab)/products/add')}
@@ -414,7 +428,7 @@ export default function ProductsScreen() {
             <MaterialCommunityIcons name="magnify" size={20} color="#64748b" />
             <TextInput
               style={styles.searchInput}
-              placeholder="ምርት ፈልግ..."
+              placeholder={t('searchProduct', 'products')}
               placeholderTextColor="#64748b"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -434,7 +448,7 @@ export default function ProductsScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statValue}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>አጠቃላይ ምርቶች</Text>
+            <Text style={styles.statLabel}>{t('totalProducts', 'products')}</Text>
           </LinearGradient>
 
           <LinearGradient
@@ -442,7 +456,7 @@ export default function ProductsScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statValue}>{totalStock}</Text>
-            <Text style={styles.statLabel}>አጠቃላይ ክምችት</Text>
+            <Text style={styles.statLabel}>{t('totalStock', 'products')}</Text>
           </LinearGradient>
 
           <LinearGradient
@@ -450,15 +464,15 @@ export default function ProductsScreen() {
             style={styles.statCard}
           >
             <Text style={styles.statValue}>{activeProducts}</Text>
-            <Text style={styles.statLabel}>ንቁ ምርቶች</Text>
+            <Text style={styles.statLabel}>{t('activeProducts', 'products')}</Text>
           </LinearGradient>
 
           <LinearGradient
             colors={['#8b5cf6', '#6d28d9']}
             style={styles.statCard}
           >
-            <Text style={styles.statValue}>ETB {totalValue.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>አጠቃላይ ዋጋ</Text>
+            <Text style={styles.statValue}>{t('currency', 'common')} {totalValue.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('totalValue', 'products')}</Text>
           </LinearGradient>
         </View>
 
@@ -470,7 +484,7 @@ export default function ProductsScreen() {
               onPress={() => setSelectedCategory('all')}
             >
               <Text style={[styles.filterChipText, selectedCategory === 'all' && styles.activeFilterChipText]}>
-                ሁሉም
+                {t('all', 'common')}
               </Text>
             </TouchableOpacity>
             
@@ -526,18 +540,18 @@ export default function ProductsScreen() {
         {/* Products List */}
         <View style={styles.productsList}>
           <Text style={styles.listTitle}>
-            {filteredProducts.length} ምርቶች ተገኝተዋል
+            {filteredProducts.length} {t('productsFound', 'products')}
           </Text>
 
           {filteredProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="package-variant" size={48} color="#475569" />
-              <Text style={styles.emptyText}>ምንም ምርቶች አልተገኙም</Text>
+              <Text style={styles.emptyText}>{t('noProducts', 'common')}</Text>
               <TouchableOpacity 
                 style={styles.emptyAddButton}
                 onPress={() => router.push('/(tab)/products/add')}
               >
-                <Text style={styles.emptyAddButtonText}>ምርት ጨምር</Text>
+                <Text style={styles.emptyAddButtonText}>{t('addProduct', 'addProduct')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
