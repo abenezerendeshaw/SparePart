@@ -87,8 +87,8 @@ export const translations: Translations = {
       en: 'Back'
     },
     trader: {
-      am: 'ነጋዴ',
-      en: 'Trader'
+      am: 'የእርሶ መደብ',
+      en: 'You are The '
     },
     dataLoadFailed: {
       am: 'ዳታ መጫን አልተቻለም',

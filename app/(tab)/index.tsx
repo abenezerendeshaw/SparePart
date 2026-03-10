@@ -429,8 +429,9 @@ export default function Dashboard() {
             </Text>
           </View>
           <View style={styles.userDetails}>
-            <Text style={styles.userFullName}>{userFullName}</Text>
+            
             <Text style={styles.userRole}>{userRole || t('trader', 'common')}</Text>
+            <Text style={styles.userFullName}>{userFullName}</Text>
             <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
               {formatDate(currentTime)}
             </Animated.Text>

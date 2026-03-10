@@ -45,7 +45,7 @@ interface ApiResponse {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -305,6 +305,46 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Language Switcher Component
+  const LanguageSwitcher = () => (
+    <View style={styles.languageSwitcher}>
+      <View style={styles.languageLabelContainer}>
+        <MaterialCommunityIcons name="translate" size={20} color="#94a3b8" />
+        <Text style={styles.languageLabel}>{t('language', 'settings')}</Text>
+      </View>
+      <View style={styles.languageButtons}>
+        <TouchableOpacity
+          style={[
+            styles.languageButton,
+            language === 'am' && styles.languageButtonActive
+          ]}
+          onPress={() => setLanguage('am')}
+        >
+          <Text style={[
+            styles.languageButtonText,
+            language === 'am' && styles.languageButtonTextActive
+          ]}>
+            {t('amharic', 'settings')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.languageButton,
+            language === 'en' && styles.languageButtonActive
+          ]}
+          onPress={() => setLanguage('en')}
+        >
+          <Text style={[
+            styles.languageButtonText,
+            language === 'en' && styles.languageButtonTextActive
+          ]}>
+            {t('english', 'settings')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   if (loading) {
     return (
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
@@ -480,6 +520,9 @@ export default function ProfileScreen() {
             color="#10b981"
             onPress={() => setPasswordModalVisible(true)}
           />
+          
+          {/* Language Switcher - Added here below change password */}
+          <LanguageSwitcher />
         </View>
 
         {/* Contact & Support */}
@@ -1000,5 +1043,52 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // New styles for language switcher
+  languageSwitcher: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  languageLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  languageLabel: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  languageButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  languageButtonActive: {
+    backgroundColor: 'rgba(41, 116, 255, 0.2)',
+    borderColor: '#2974ff',
+  },
+  languageButtonText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  languageButtonTextActive: {
+    color: '#2974ff',
   },
 });

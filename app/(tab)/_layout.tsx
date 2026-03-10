@@ -8,12 +8,14 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import storage from './../lib/storage';
 import React from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { t } = useLanguage(); // Get translation function
 
   useEffect(() => {
     checkAuth();
@@ -97,19 +99,15 @@ export default function TabLayout() {
 
         tabBarActiveTintColor: '#2974ff',
         tabBarInactiveTintColor: '#64748b',
-
         tabBarShowLabel: true,
-
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
           marginBottom: 8,
         },
-
         tabBarIconStyle: {
           marginTop: 8,
         },
-
         tabBarItemStyle: {
           paddingVertical: 5,
         },
@@ -118,8 +116,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'ዋና',
-          tabBarLabel: 'ዋና',
+          title: t('home', 'navigation'),
+          tabBarLabel: t('home', 'navigation'),
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
@@ -135,12 +133,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="products"
         options={{
-          title: 'ምርቶች',
-          tabBarLabel: 'ምርቶች',
+          title: t('products', 'navigation'),
+          tabBarLabel: t('products', 'navigation'),
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
-                name={focused ? 'package-variant-closed-plus' : 'package-variant-closed-check'}
+                name={focused ? 'package-variant-closed' : 'package-variant-closed'}
                 size={22}
                 color={color}
               />
@@ -152,12 +150,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="sales"
         options={{
-          title: 'ሽያጭ',
-          tabBarLabel: 'ሽያጭ',
+          title: t('sales', 'navigation'),
+          tabBarLabel: t('sales', 'navigation'),
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
-                name={focused ? 'bank-check' : 'bank-transfer'}
+                name={focused ? 'cash-register' : 'cash-register'}
                 size={22}
                 color={color}
               />
@@ -169,8 +167,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'ክምችት',
-          tabBarLabel: 'ክምችት',
+          title: t('inventory', 'navigation'),
+          tabBarLabel: t('inventory', 'navigation'),
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
@@ -186,8 +184,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'መገለጫ',
-          tabBarLabel: 'መገለጫ',
+          title: t('profile', 'navigation'),
+          tabBarLabel: t('profile', 'navigation'),
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
@@ -200,12 +198,12 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen name="products/add" options={{ headerShown: false, href: null }} />
-      <Tabs.Screen name="sales/new" options={{ headerShown: false, href: null }} />
-      <Tabs.Screen name="sales/[id]" options={{ headerShown: false, href: null }} />
-      <Tabs.Screen name="sales/receipt" options={{ headerShown: false, href: null }} />
-      <Tabs.Screen name="products/[id]" options={{ headerShown: false, href: null }} />
-
+      {/* Hidden screens - these won't show in tab bar */}
+      <Tabs.Screen name="products/add" options={{ href: null }} />
+      <Tabs.Screen name="sales/new" options={{ href: null }} />
+      <Tabs.Screen name="sales/[id]" options={{ href: null }} />
+      <Tabs.Screen name="sales/receipt" options={{ href: null }} />
+      <Tabs.Screen name="products/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -219,7 +217,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-
   activeIconContainer: {
     backgroundColor: 'rgba(41, 116, 255, 0.15)',
     shadowColor: '#2974ff',

@@ -129,9 +129,9 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() => router.push('/auth/register')}
             >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+              <MaterialCommunityIcons name="arrow-right" size={24} color="#ffffff" />
             </TouchableOpacity>
             <LanguageSwitcher />
           </View>
