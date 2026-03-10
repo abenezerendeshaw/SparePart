@@ -15,7 +15,11 @@ export default function RootLayout() {
           options={{ headerShown: false }} 
         />
         <Stack.Screen 
-          name="(tabs)" 
+          name="forgot-password" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="(tab)" 
           options={{ headerShown: false }} 
         />
       </Stack>

@@ -654,6 +654,78 @@ auth: {
     en: 'Create Account'
   },
 
+  enterEmailInstructions: {
+    am: 'የይለፍ ቃልዎን ለማስመለስ ኢሜይል ያስገቡ',
+    en: 'Enter your email to reset your password'
+  },
+  sendCode: {
+    am: 'ኮድ ላክ',
+    en: 'Send Code'
+  },
+  backToLogin: {
+    am: 'ወደ መግቢያ ተመለስ',
+    en: 'Back to Login'
+  },
+  verifyCode: {
+    am: 'ኮድ አረጋግጥ',
+    en: 'Verify Code'
+  },
+  enterCodeInstructions: {
+    am: 'ወደ {email} የተላከውን 6 አሃዝ ኮድ ያስገቡ',
+    en: 'Enter the 6-digit code sent to {email}'
+  },
+  verify: {
+    am: 'አረጋግጥ',
+    en: 'Verify'
+  },
+  didntReceiveCode: {
+    am: 'ኮድ አልደረሰም?',
+    en: "Didn't receive the code?"
+  },
+  resend: {
+    am: 'እንደገና ላክ',
+    en: 'Resend'
+  },
+  resendIn: {
+    am: 'እንደገና ለመላክ {timer} ሰከንድ',
+    en: 'Resend in {timer}s'
+  },
+  changeEmail: {
+    am: 'ኢሜይል ቀይር',
+    en: 'Change Email'
+  },
+  resetPassword: {
+    am: 'የይለፍ ቃል ቀይር',
+    en: 'Reset Password'
+  },
+  enterNewPasswordInstructions: {
+    am: 'አዲስ የይለፍ ቃል ያስገቡ',
+    en: 'Enter your new password'
+  },
+  newPassword: {
+    am: 'አዲስ የይለፍ ቃል',
+    en: 'New Password'
+  },
+  confirmPassword: {
+    am: 'አዲስ የይለፍ ቃል ድገም',
+    en: 'Confirm New Password'
+  },
+  emailRequired: {
+    am: 'ኢሜይል ያስፈልጋል',
+    en: 'Email is required'
+  },
+  validCodeRequired: {
+    am: 'እባክዎ ትክክለኛ 6 አሃዝ ኮድ ያስገቡ',
+    en: 'Please enter a valid 6-digit code'
+  },
+  invalidCode: {
+    am: 'ልክ ያልሆነ ወይም ጊዜው ያለፈበት ኮድ',
+    en: 'Invalid or expired code'
+  },
+  passwordResetSuccess: {
+    am: 'የይለፍ ቃልዎ በተሳካ ሁኔታ ተቀይሯል። እባክዎ ይግቡ',
+    en: 'Your password has been reset successfully. Please login'
+  },
 
   fillAllFields: {
     am: 'እባክዎ ሁሉንም መስኮች ይሙሉ',
@@ -739,10 +811,7 @@ auth: {
     am: 'ቢያንስ 6 ቁምፊዎች',
     en: 'At least 6 characters'
   },
-  confirmPassword: {
-    am: 'የይለፍ ቃል ድገም',
-    en: 'Confirm Password'
-  },
+
   agreeTerms: {
     am: 'የአገልግሎት ውል እና የግላዊነት መመሪያዎችን ተቀበልኩ',
     en: 'I agree to the Terms of Service and Privacy Policy'
@@ -755,7 +824,7 @@ auth: {
     am: 'በመመዝገብ፣ የአገልግሎት ውል እና የግላዊነት መመሪያዎችን ተቀብለዋል',
     en: 'By registering, you agree to our Terms of Service and Privacy Policy'
   },
-  
+
 },
 
 

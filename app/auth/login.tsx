@@ -173,9 +173,10 @@ export default function LoginScreen() {
             <View style={styles.inputWrapper}>
               <View style={styles.passwordHeader}>
                 <Text style={styles.label}>{t('password', 'common')}</Text>
-                <TouchableOpacity onPress={() => Alert.alert(t('forgotPassword', 'auth'), t('comingSoon', 'common'))}>
-                  <Text style={styles.forgotPassword}>{t('forgotPassword', 'auth')}</Text>
-                </TouchableOpacity>
+               
+            <TouchableOpacity onPress={() => router.push('./forgot-password')}>
+              <Text style={styles.forgotPassword}>{t('forgotPassword', 'auth')}</Text>
+            </TouchableOpacity>
               </View>
               <View style={styles.inputContainer}>
                 <MaterialCommunityIcons 

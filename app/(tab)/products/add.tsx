@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -25,6 +25,8 @@ export default function AddProductScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     details: false,
@@ -48,16 +50,74 @@ export default function AddProductScreen() {
     selling_price: '',
     selling_quantity: '0',
     profit: '0',
-    supplier_id: '',
-    location: '',
     status: 'active',
-    sync_status: 'pending',
-    marketplace_product_id: '',
-    owner_id: '',
-    created_by: '',
-    updated_by: '',
-    online_product_id: '',
   });
+
+  // Track which fields have been filled
+  const [filledSections, setFilledSections] = useState({
+    basic: false,
+    details: false,
+    pricing: false,
+    stock: false,
+    additional: false,
+  });
+
+  // Check if basic section is complete
+  useEffect(() => {
+    if (form.product_name && form.product_code) {
+      setFilledSections(prev => ({ ...prev, basic: true }));
+      if (expandedSections.basic) {
+        setTimeout(() => {
+          setExpandedSections(prev => ({ ...prev, basic: false, details: true }));
+          scrollToSection('details');
+        }, 1000);
+      }
+    }
+  }, [form.product_name, form.product_code]);
+
+  // Check if details section has any input
+  useEffect(() => {
+    if (form.category || form.brand || form.description || form.unit !== 'pcs') {
+      setFilledSections(prev => ({ ...prev, details: true }));
+    }
+  }, [form.category, form.brand, form.description, form.unit]);
+
+  // Check if pricing section is complete
+  useEffect(() => {
+    if (form.selling_price && Number(form.selling_price) > 0) {
+      setFilledSections(prev => ({ ...prev, pricing: true }));
+      if (expandedSections.pricing) {
+        setTimeout(() => {
+          setExpandedSections(prev => ({ ...prev, pricing: false, stock: true }));
+          scrollToSection('stock');
+        }, 1000);
+      }
+    }
+  }, [form.selling_price]);
+
+  // Check if stock section has any input
+  useEffect(() => {
+    if (form.total_stock || form.min_stock || form.max_stock) {
+      setFilledSections(prev => ({ ...prev, stock: true }));
+    }
+  }, [form.total_stock, form.min_stock, form.max_stock]);
+
+  const scrollToSection = (section: string) => {
+    setTimeout(() => {
+      const sectionPositions: { [key: string]: number } = {
+        basic: 0,
+        details: 280,
+        pricing: 560,
+        stock: 840,
+        additional: 1120,
+      };
+      
+      scrollViewRef.current?.scrollTo({
+        y: sectionPositions[section] || 0,
+        animated: true,
+      });
+    }, 100);
+  };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -79,8 +139,16 @@ export default function AddProductScreen() {
       Alert.alert(t('error'), t('productCodeRequired', 'addProduct'));
       return false;
     }
+    if (!form.category.trim()) {
+      Alert.alert('ስህተት', 'ምድብ ያስፈልጋል');
+      return false;
+    }
     if (!form.selling_price || Number(form.selling_price) <= 0) {
-      Alert.alert(t('error'), t('validSellingPrice', 'addProduct'));
+      Alert.alert('ስህተት', 'ትክክለኛ የሽያጭ ዋጋ ያስገቡ');
+      return false;
+    }
+    if (!form.buying_price || Number(form.buying_price) <= 0) {
+      Alert.alert('ስህተት', 'ትክክለኛ የግዢ ዋጋ ያስገቡ');
       return false;
     }
     return true;
@@ -103,23 +171,27 @@ export default function AddProductScreen() {
         return;
       }
 
-      const currentTime = new Date().toISOString();
       const profit = calculateProfit();
 
       const productData = {
-        ...form,
-        buying_price: Number(form.buying_price) || 0,
-        selling_price: Number(form.selling_price),
+        product_name: form.product_name.trim(),
+        product_code: form.product_code.trim(),
+        category: form.category.trim(),
+        brand: form.brand?.trim() || '',
+        description: form.description?.trim() || '',
+        unit: form.unit || 'pcs',
         total_stock: Number(form.total_stock) || 0,
         min_stock: Number(form.min_stock) || 0,
         max_stock: Number(form.max_stock) || 0,
         new_arrival_quantity: Number(form.new_arrival_quantity) || 0,
+        buying_price: Number(form.buying_price) || 0,
+        selling_price: Number(form.selling_price),
         selling_quantity: Number(form.selling_quantity) || 0,
         profit: Number(profit) || 0,
-        created_at: currentTime,
-        updated_at: currentTime,
-        last_sync_attempt: currentTime,
+        status: form.status || 'active',
       };
+
+      console.log('Sending product data:', productData);
 
       const response = await api.post('/products', productData, {
         headers: { Authorization: `Bearer ${token}` },
@@ -152,15 +224,7 @@ export default function AddProductScreen() {
                   selling_price: '',
                   selling_quantity: '0',
                   profit: '0',
-                  supplier_id: '',
-                  location: '',
                   status: 'active',
-                  sync_status: 'pending',
-                  marketplace_product_id: '',
-                  owner_id: '',
-                  created_by: '',
-                  updated_by: '',
-                  online_product_id: '',
                 });
               },
               style: 'cancel',
@@ -172,7 +236,36 @@ export default function AddProductScreen() {
       }
     } catch (error: any) {
       console.log('Error adding product:', error);
-      Alert.alert(t('error'), error.response?.data?.message || t('error'));
+      
+      let errorMessage = t('error');
+      
+      if (error.response) {
+        console.log('Error response:', error.response.data);
+        
+        if (error.response.status === 400) {
+          if (error.response.data.message?.includes('category')) {
+            errorMessage = 'ምድብ ያስፈልጋል';
+          } else if (error.response.data.message?.includes('buying_price') || 
+                     error.response.data.message?.includes('selling_price')) {
+            errorMessage = 'ዋጋዎች ከዜሮ በላይ መሆን አለባቸው';
+          } else {
+            errorMessage = error.response.data.message || 'ያልተሟላ መረጃ';
+          }
+        } else if (error.response.status === 401) {
+          errorMessage = 'እባክዎ እንደገና ይግቡ';
+          router.replace('/auth/login');
+        } else if (error.response.status === 500) {
+          errorMessage = 'የአገልጋይ ስህተት';
+        } else {
+          errorMessage = error.response.data?.message || `ስህተት ተከስቷል (${error.response.status})`;
+        }
+      } else if (error.request) {
+        errorMessage = 'ከአገልጋይ ጋር መገናኘት አልተቻለም';
+      } else {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(t('error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -182,34 +275,56 @@ export default function AddProductScreen() {
     section: keyof typeof expandedSections,
     title: string,
     icon: string,
-    children: React.ReactNode
+    children: React.ReactNode,
+    isRequired: boolean = false
   ) => {
     const isExpanded = expandedSections[section];
+    const isFilled = filledSections[section];
 
     return (
       <View style={styles.section}>
         <TouchableOpacity
-          style={[styles.sectionHeader, isExpanded && styles.sectionHeaderExpanded]}
+          style={[
+            styles.sectionHeader, 
+            isExpanded && styles.sectionHeaderExpanded,
+            isFilled && !isExpanded && styles.sectionHeaderFilled
+          ]}
           onPress={() => toggleSection(section)}
           activeOpacity={0.7}
         >
           <View style={styles.sectionHeaderLeft}>
-            <View style={[styles.sectionIcon, isExpanded && styles.sectionIconExpanded]}>
+            <View style={[
+              styles.sectionIcon, 
+              isExpanded && styles.sectionIconExpanded,
+              isFilled && !isExpanded && styles.sectionIconFilled
+            ]}>
               <MaterialCommunityIcons 
-                name={icon} 
+                name={isFilled && !isExpanded ? "check" : icon} 
                 size={20} 
-                color={isExpanded ? '#10b981' : '#64748b'} 
+                color={isExpanded ? '#10b981' : (isFilled ? '#10b981' : '#64748b')} 
               />
             </View>
-            <Text style={[styles.sectionTitle, isExpanded && styles.sectionTitleExpanded]}>
+            <Text style={[
+              styles.sectionTitle, 
+              isExpanded && styles.sectionTitleExpanded,
+              isFilled && !isExpanded && styles.sectionTitleFilled
+            ]}>
               {title}
+              {isRequired && <Text style={styles.requiredStar}> *</Text>}
             </Text>
           </View>
-          <MaterialCommunityIcons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={24} 
-            color={isExpanded ? '#10b981' : '#64748b'} 
-          />
+          <View style={styles.sectionHeaderRight}>
+            {isFilled && !isExpanded && (
+              <View style={styles.completedBadge}>
+                <Text style={styles.completedBadgeText}>✓</Text>
+              </View>
+            )}
+            <MaterialCommunityIcons 
+              name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color={isExpanded ? '#10b981' : (isFilled ? '#10b981' : '#64748b')} 
+            />
+          </View>
         </TouchableOpacity>
         
         {isExpanded && (
@@ -229,7 +344,10 @@ export default function AddProductScreen() {
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -269,6 +387,40 @@ export default function AddProductScreen() {
             </View>
           </View>
 
+          {/* Quick Summary */}
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons 
+                name={form.product_name ? "check-circle" : "circle-outline"} 
+                size={16} 
+                color={form.product_name ? "#10b981" : "#64748b"} 
+              />
+              <Text style={[styles.summaryText, form.product_name && styles.summaryTextComplete]}>
+                {t('basicInfo', 'addProduct')}
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons 
+                name={form.selling_price ? "check-circle" : "circle-outline"} 
+                size={16} 
+                color={form.selling_price ? "#10b981" : "#64748b"} 
+              />
+              <Text style={[styles.summaryText, form.selling_price && styles.summaryTextComplete]}>
+                {t('pricing', 'addProduct')}
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons 
+                name={form.total_stock ? "check-circle" : "circle-outline"} 
+                size={16} 
+                color={form.total_stock ? "#10b981" : "#64748b"} 
+              />
+              <Text style={[styles.summaryText, form.total_stock && styles.summaryTextComplete]}>
+                {t('stock', 'addProduct')}
+              </Text>
+            </View>
+          </View>
+
           {/* Form */}
           <View style={styles.form}>
             {/* Basic Information Section */}
@@ -276,7 +428,7 @@ export default function AddProductScreen() {
               <>
                 {/* Product Name */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('productName', 'addProduct')}</Text>
+                  <Text style={styles.label}>{t('productName', 'addProduct')} *</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="tag-outline" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
@@ -291,7 +443,7 @@ export default function AddProductScreen() {
 
                 {/* Product Code */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('productCode', 'addProduct')}</Text>
+                  <Text style={styles.label}>{t('productCode', 'addProduct')} *</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="barcode" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
@@ -303,10 +455,15 @@ export default function AddProductScreen() {
                     />
                   </View>
                 </View>
+              </>
+            ), true)}
 
+            {/* Details Section */}
+            {renderSection('details', t('details', 'addProduct'), 'text-box', (
+              <>
                 {/* Category */}
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('category', 'addProduct')}</Text>
+                  <Text style={styles.label}>{t('category', 'addProduct')} *</Text>
                   <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="shape-outline" size={20} color="#64748b" style={styles.inputIcon} />
                     <TextInput
@@ -318,12 +475,7 @@ export default function AddProductScreen() {
                     />
                   </View>
                 </View>
-              </>
-            ))}
 
-            {/* Details Section */}
-            {renderSection('details', t('details', 'addProduct'), 'text-box', (
-              <>
                 {/* Brand */}
                 <View style={styles.inputWrapper}>
                   <Text style={styles.label}>{t('brand', 'addProduct')}</Text>
@@ -335,24 +487,6 @@ export default function AddProductScreen() {
                       placeholderTextColor="#64748b"
                       value={form.brand}
                       onChangeText={(value) => handleInputChange('brand', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Description */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('description', 'addProduct')}</Text>
-                  <View style={[styles.inputContainer, styles.textAreaContainer]}>
-                    <MaterialCommunityIcons name="text-box-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder={t('descriptionPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      multiline
-                      numberOfLines={4}
-                      textAlignVertical="top"
-                      value={form.description}
-                      onChangeText={(value) => handleInputChange('description', value)}
                     />
                   </View>
                 </View>
@@ -371,6 +505,24 @@ export default function AddProductScreen() {
                     />
                   </View>
                 </View>
+
+                {/* Description */}
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.label}>{t('description', 'addProduct')}</Text>
+                  <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                    <MaterialCommunityIcons name="text-box-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder={t('descriptionPlaceholder', 'addProduct')}
+                      placeholderTextColor="#64748b"
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                      value={form.description}
+                      onChangeText={(value) => handleInputChange('description', value)}
+                    />
+                  </View>
+                </View>
               </>
             ))}
 
@@ -380,7 +532,7 @@ export default function AddProductScreen() {
                 {/* Price Row */}
                 <View style={styles.row}>
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('buyingPrice', 'addProduct')}</Text>
+                    <Text style={styles.label}>{t('buyingPrice', 'addProduct')} *</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -401,7 +553,7 @@ export default function AddProductScreen() {
                   </View>
 
                   <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('sellingPrice', 'addProduct')}</Text>
+                    <Text style={styles.label}>{t('sellingPrice', 'addProduct')} *</Text>
                     <View style={styles.inputContainer}>
                       <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
                       <TextInput
@@ -427,7 +579,7 @@ export default function AddProductScreen() {
                   <View style={styles.profitContainer}>
                     <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
                     <Text style={styles.profitText}>
-                      {t('profit', 'addProduct')}: {calculateProfit()} ብር
+                      {t('profit', 'addProduct')}: {calculateProfit()} {t('currency', 'common')}
                     </Text>
                     <Text style={styles.profitPercent}>
                       ({Number(form.buying_price) > 0 
@@ -437,7 +589,7 @@ export default function AddProductScreen() {
                   </View>
                 )}
               </>
-            ))}
+            ), true)}
 
             {/* Stock Management Section */}
             {renderSection('stock', t('stock', 'addProduct'), 'package-variant', (
@@ -526,74 +678,48 @@ export default function AddProductScreen() {
               </>
             ))}
 
-            {/* Additional Information Section */}
-            {renderSection('additional', t('additional', 'addProduct'), 'dots-horizontal', (
-              <>
-                {/* Location */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('location', 'addProduct')}</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="map-marker" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('locationPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.location}
-                      onChangeText={(value) => handleInputChange('location', value)}
+            {/* Additional Section - Status */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderLeft}>
+                  <View style={styles.sectionIcon}>
+                    <MaterialCommunityIcons name="toggle-switch" size={20} color="#64748b" />
+                  </View>
+                  <Text style={styles.sectionTitle}>{t('status', 'addProduct')}</Text>
+                </View>
+              </View>
+              <View style={styles.sectionContent}>
+                <View style={styles.statusContainer}>
+                  <TouchableOpacity
+                    style={[styles.statusOption, form.status === 'active' && styles.statusOptionActive]}
+                    onPress={() => handleInputChange('status', 'active')}
+                  >
+                    <MaterialCommunityIcons 
+                      name="check-circle" 
+                      size={16} 
+                      color={form.status === 'active' ? '#10b981' : '#64748b'} 
                     />
-                  </View>
-                </View>
-
-                {/* Supplier ID */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('supplierId', 'addProduct')}</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="truck" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('supplierIdPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.supplier_id}
-                      onChangeText={(value) => handleInputChange('supplier_id', value)}
+                    <Text style={[styles.statusOptionText, form.status === 'active' && styles.statusOptionTextActive]}>
+                      {t('active', 'addProduct')}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.statusOption, form.status === 'inactive' && styles.statusOptionInactive]}
+                    onPress={() => handleInputChange('status', 'inactive')}
+                  >
+                    <MaterialCommunityIcons 
+                      name="close-circle" 
+                      size={16} 
+                      color={form.status === 'inactive' ? '#ef4444' : '#64748b'} 
                     />
-                  </View>
+                    <Text style={[styles.statusOptionText, form.status === 'inactive' && styles.statusOptionTextInactive]}>
+                      {t('inactive', 'addProduct')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-
-                {/* Status */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('status', 'addProduct')}</Text>
-                  <View style={styles.statusContainer}>
-                    <TouchableOpacity
-                      style={[styles.statusOption, form.status === 'active' && styles.statusOptionActive]}
-                      onPress={() => handleInputChange('status', 'active')}
-                    >
-                      <MaterialCommunityIcons 
-                        name="check-circle" 
-                        size={16} 
-                        color={form.status === 'active' ? '#10b981' : '#64748b'} 
-                      />
-                      <Text style={[styles.statusOptionText, form.status === 'active' && styles.statusOptionTextActive]}>
-                        {t('active', 'addProduct')}
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[styles.statusOption, form.status === 'inactive' && styles.statusOptionInactive]}
-                      onPress={() => handleInputChange('status', 'inactive')}
-                    >
-                      <MaterialCommunityIcons 
-                        name="close-circle" 
-                        size={16} 
-                        color={form.status === 'inactive' ? '#ef4444' : '#64748b'} 
-                      />
-                      <Text style={[styles.statusOptionText, form.status === 'inactive' && styles.statusOptionTextInactive]}>
-                        {t('inactive', 'addProduct')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            ))}
+              </View>
+            </View>
 
             {/* Submit Button */}
             <TouchableOpacity
@@ -672,6 +798,28 @@ const styles = StyleSheet.create({
   progressLineComplete: {
     backgroundColor: '#10b981',
   },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 20,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  summaryText: {
+    color: '#64748b',
+    fontSize: 12,
+  },
+  summaryTextComplete: {
+    color: '#10b981',
+  },
   form: {
     paddingHorizontal: 20,
     paddingBottom: 40,
@@ -697,6 +845,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#10b981',
   },
+  sectionHeaderFilled: {
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  },
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -713,6 +864,9 @@ const styles = StyleSheet.create({
   sectionIconExpanded: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
   },
+  sectionIconFilled: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -720,6 +874,27 @@ const styles = StyleSheet.create({
   },
   sectionTitleExpanded: {
     color: '#10b981',
+  },
+  sectionTitleFilled: {
+    color: '#10b981',
+  },
+  sectionHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  completedBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  completedBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   sectionContent: {
     padding: 16,
@@ -732,6 +907,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#cbd5e1',
     marginBottom: 8,
+  },
+  requiredStar: {
+    color: '#ef4444',
   },
   inputContainer: {
     flexDirection: 'row',
