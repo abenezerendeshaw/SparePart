@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -15,15 +16,16 @@ import {
   View,
   Animated,
 } from 'react-native';
-import { authApi } from '../lib/api';
+import publicApi from '../lib/public-api';
 import { useLanguage } from '../../context/LanguageContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [step, setStep] = useState<'email' | 'verify' | 'reset'>('email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -53,26 +55,36 @@ export default function ForgotPasswordScreen() {
     setResendDisabled(true);
   };
 
-  const handleRequestCode = async () => {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleRequestOTP = async () => {
     if (!email) {
-      Alert.alert(t('error'), t('emailRequired', 'auth'));
+      Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert(t('error'), t('validEmail', 'auth'));
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authApi.post('/forgot-password', { 
-        email,
-        action: 'request'
+      console.log('Sending OTP request to:', '/forgot-password.php?action=request-otp');
+      console.log('With email:', email);
+      
+      const response = await publicApi.post('/forgot-password.php?action=request-otp', { 
+        email: email 
       });
 
-      if (response.data.status === 'success' || response.data.success) {
+      console.log('Full response:', JSON.stringify(response.data, null, 2));
+
+      if (response.data && response.data.success) {
         Animated.sequence([
           Animated.timing(fadeAnim, {
             toValue: 0,
@@ -89,43 +101,62 @@ export default function ForgotPasswordScreen() {
         setStep('verify');
         startTimer();
         
-        if (__DEV__ && response.data.debug_code) {
-          Alert.alert('Debug Code', `Your verification code is: ${response.data.debug_code}`);
-        }
+        await AsyncStorage.setItem('reset_email', email);
+        
+        Alert.alert(
+          'Success', 
+          response.data.message || 'OTP sent successfully to your email'
+        );
       } else {
-        Alert.alert(t('error'), response.data.message || t('error'));
+        Alert.alert('Error', response.data?.message || 'Failed to send OTP');
       }
     } catch (error: any) {
-      console.log('Error requesting reset:', error);
-      Alert.alert(
-        t('error'), 
-        error.response?.data?.message || error.response?.data?.errors?.email?.[0] || t('tryAgain', 'common')
-      );
+      console.log('Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      
+      if (error.code === 'ECONNABORTED') {
+        Alert.alert('Error', 'Request timeout. Please check your internet connection.');
+      } else if (error.response?.status === 404) {
+        Alert.alert(
+          'Email Not Found!', 
+          'If your email is registered in our system, you will receive a password reset code.'
+        );
+      } else if (error.response?.status === 500) {
+        Alert.alert('Error', 'Server error. Please try again later.');
+      } else if (error.message === 'Network Error') {
+        Alert.alert(
+          'Error', 
+          'Network error. Please check your internet connection.'
+        );
+      } else {
+        Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyCode = async () => {
-    const fullCode = code.join('');
-    if (fullCode.length !== 6) {
-      Alert.alert(t('error'), t('validCodeRequired', 'auth'));
+  const handleVerifyOTP = async () => {
+    const fullOtp = otp.join('');
+    if (fullOtp.length !== 6) {
+      Alert.alert('Error', 'Please enter the 6-digit code');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authApi.post('/forgot-password', {
-        email,
-        code: fullCode,
-        action: 'verify'
+      const response = await publicApi.post('/forgot-password.php?action=verify-otp', {
+        email: email,
+        otp: fullOtp
       });
 
-      if (response.data.status === 'success' || response.data.success) {
-        if (response.data.token) {
-          setResetToken(response.data.token);
-        }
-        
+      console.log('Verify OTP response:', response.data);
+
+      if (response.data.success) {
         Animated.sequence([
           Animated.timing(fadeAnim, {
             toValue: 0,
@@ -139,15 +170,20 @@ export default function ForgotPasswordScreen() {
           }),
         ]).start();
         
+        if (response.data.data && response.data.data.reset_token) {
+          setResetToken(response.data.data.reset_token);
+          await AsyncStorage.setItem('reset_token', response.data.data.reset_token);
+        }
+        
         setStep('reset');
       } else {
-        Alert.alert(t('error'), response.data.message || t('invalidCode', 'auth'));
+        Alert.alert('Error', response.data.message || 'Invalid verification code');
       }
     } catch (error: any) {
-      console.log('Error verifying code:', error);
+      console.log('Error verifying OTP:', error);
       Alert.alert(
-        t('error'), 
-        error.response?.data?.message || error.response?.data?.errors?.code?.[0] || t('invalidCode', 'auth')
+        'Error', 
+        error.response?.data?.message || 'Invalid verification code'
       );
     } finally {
       setLoading(false);
@@ -156,305 +192,314 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!newPassword || !confirmPassword) {
-      Alert.alert(t('error'), t('fillAllFields', 'auth'));
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert(t('error'), t('passwordMismatch', 'auth'));
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert(t('error'), t('passwordLength', 'auth'));
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
-    const fullCode = code.join('');
-
     setLoading(true);
     try {
-      const response = await authApi.post('/forgot-password', {
-        email,
-        code: fullCode,
+      const token = resetToken || await AsyncStorage.getItem('reset_token');
+      const fullOtp = otp.join('');
+
+      const response = await publicApi.post('/forgot-password.php?action=reset-password', {
+        email: email,
         new_password: newPassword,
-        action: 'reset'
+        confirm_password: confirmPassword,
+        reset_token: token
       });
 
-      if (response.data.status === 'success' || response.data.success) {
+      console.log('Reset password response:', response.data);
+
+      if (response.data.success) {
         Alert.alert(
-          t('success'),
-          response.data.message || t('passwordResetSuccess', 'auth'),
+          'Success',
+          'Password reset successfully! You can now login with your new password.',
           [
             {
-              text: t('goToLogin', 'auth'),
-              onPress: () => router.push('./login')
+              text: 'Go to Login',
+              onPress: () => {
+                AsyncStorage.removeItem('reset_email');
+                AsyncStorage.removeItem('reset_token');
+                router.push('./login');
+              }
             }
           ]
         );
       } else {
-        Alert.alert(t('error'), response.data.message || t('error'));
+        Alert.alert('Error', response.data.message || 'Failed to reset password');
       }
     } catch (error: any) {
       console.log('Error resetting password:', error);
-      
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstError = Object.values(errors)[0]?.[0];
-        Alert.alert(t('error'), firstError || t('error'));
-      } else {
-        Alert.alert(t('error'), error.response?.data?.message || t('error'));
-      }
+      Alert.alert(
+        'Error', 
+        error.response?.data?.message || 'Failed to reset password'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     if (resendDisabled) return;
-    handleRequestCode();
+    await handleRequestOTP();
   };
 
   const handleCodeChange = (text: string, index: number) => {
-    const newCode = [...code];
-    newCode[index] = text;
-    setCode(newCode);
+    const newOtp = [...otp];
+    newOtp[index] = text;
+    setOtp(newOtp);
 
+    // Auto-advance to next input
     if (text && index < 5) {
       codeInputs.current[index + 1]?.focus();
     }
   };
 
   const handleCodeKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
+    // Handle backspace to go to previous input
+    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
       codeInputs.current[index - 1]?.focus();
     }
   };
 
   const renderEmailStep = () => (
     <Animated.View style={{ opacity: fadeAnim }}>
-      <View style={styles.welcomeContainer}>
-        <Text style={styles.welcomeTitle}>{t('forgotPassword', 'auth')}</Text>
-        <Text style={styles.description}>
-          {t('enterEmailInstructions', 'auth')}
-        </Text>
+      <View style={styles.iconContainer}>
+        <LinearGradient
+          colors={['rgba(41, 116, 255, 0.2)', 'rgba(41, 116, 255, 0.05)']}
+          style={styles.iconCircle}
+        >
+          <MaterialCommunityIcons name="email-lock" size={60} color="#2974ff" />
+        </LinearGradient>
       </View>
 
-      <View style={styles.formContainer}>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>{t('email', 'common')}</Text>
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="email-outline"
-              size={20}
-              color="#64748b"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="name@company.com"
-              placeholderTextColor="#64748b"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
-          </View>
+      <Text style={styles.title}>Forgot Password?</Text>
+      <Text style={styles.subtitle}>
+        Enter your email address and we'll send you a 6-digit code to reset your password.
+      </Text>
+
+      <View style={styles.inputWrapper}>
+        <Text style={styles.label}>Email Address</Text>
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons
+            name="email-outline"
+            size={20}
+            color="#64748b"
+            style={styles.inputIcon}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="name@company.com"
+            placeholderTextColor="#64748b"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+            editable={!loading}
+          />
         </View>
-
-        <TouchableOpacity
-          style={[styles.signInButton, loading && styles.buttonDisabled]}
-          onPress={handleRequestCode}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <>
-              <Text style={styles.signInButtonText}>{t('sendCode', 'auth')}</Text>
-              <MaterialCommunityIcons name="send" size={20} color="#ffffff" />
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.createAccountButton}
-          onPress={() => router.push('./login')}
-          disabled={loading}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#cbd5e1" />
-          <Text style={styles.createAccountButtonText}>{t('backToLogin', 'auth')}</Text>
-        </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={[styles.primaryButton, loading && styles.buttonDisabled]}
+        onPress={handleRequestOTP}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Send Code</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => router.push('./login')}
+        disabled={loading}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={20} color="#94a3b8" />
+        <Text style={styles.secondaryButtonText}>Back to Login</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 
   const renderVerifyStep = () => (
     <Animated.View style={{ opacity: fadeAnim }}>
-      <View style={styles.welcomeContainer}>
-        <Text style={styles.welcomeTitle}>{t('verifyCode', 'auth')}</Text>
-        <Text style={styles.description}>
-          {t('enterCodeInstructions', 'auth').replace('{email}', email)}
-        </Text>
+      <View style={styles.iconContainer}>
+        <LinearGradient
+          colors={['rgba(41, 116, 255, 0.2)', 'rgba(41, 116, 255, 0.05)']}
+          style={styles.iconCircle}
+        >
+          <MaterialCommunityIcons name="shield-lock" size={60} color="#2974ff" />
+        </LinearGradient>
       </View>
 
-      <View style={styles.formContainer}>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>{t('verificationCode', 'auth')}</Text>
-          <View style={styles.codeContainer}>
-            {code.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={ref => codeInputs.current[index] = ref}
-                style={styles.codeInput}
-                maxLength={1}
-                keyboardType="number-pad"
-                value={digit}
-                onChangeText={(text) => handleCodeChange(text, index)}
-                onKeyPress={(e) => handleCodeKeyPress(e, index)}
-                selectTextOnFocus
-                editable={!loading}
-              />
-            ))}
-          </View>
-        </View>
+      <Text style={styles.title}>Verify Code</Text>
+      <Text style={styles.subtitle}>
+        Enter the 6-digit code sent to {'\n'}
+        <Text style={styles.emailText}>{email}</Text>
+      </Text>
 
-        <TouchableOpacity
-          style={[styles.signInButton, loading && styles.buttonDisabled]}
-          onPress={handleVerifyCode}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <>
-              <Text style={styles.signInButtonText}>{t('verify', 'auth')}</Text>
-              <MaterialCommunityIcons name="check" size={20} color="#ffffff" />
-            </>
-          )}
-        </TouchableOpacity>
+      <View style={styles.codeContainer}>
+        {otp.map((digit, index) => (
+          <TextInput
+            key={index}
+            ref={ref => codeInputs.current[index] = ref}
+            style={styles.codeInput}
+            maxLength={1}
+            keyboardType="number-pad"
+            value={digit}
+            onChangeText={(text) => handleCodeChange(text, index)}
+            onKeyPress={(e) => handleCodeKeyPress(e, index)}
+            selectTextOnFocus
+            editable={!loading}
+          />
+        ))}
+      </View>
 
-        <View style={styles.resendContainer}>
-          <Text style={styles.rememberText}>{t('didntReceiveCode', 'auth')}</Text>
-          <TouchableOpacity onPress={handleResendCode} disabled={resendDisabled || loading}>
-            <Text style={[styles.forgotPassword, resendDisabled && styles.resendLinkDisabled]}>
-              {resendDisabled ? t('resendIn', 'auth').replace('{timer}', timer.toString()) : t('resend', 'auth')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <TouchableOpacity
+        style={[styles.primaryButton, loading && styles.buttonDisabled]}
+        onPress={handleVerifyOTP}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Verify Code</Text>
+        )}
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.createAccountButton}
-          onPress={() => setStep('email')}
-          disabled={loading}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#cbd5e1" />
-          <Text style={styles.createAccountButtonText}>{t('changeEmail', 'auth')}</Text>
+      <View style={styles.resendContainer}>
+        <Text style={styles.resendText}>Didn't receive code? </Text>
+        <TouchableOpacity onPress={handleResendCode} disabled={resendDisabled || loading}>
+          <Text style={[styles.resendLink, resendDisabled && styles.resendLinkDisabled]}>
+            {resendDisabled ? `Resend in ${formatTime(timer)}` : 'Resend'}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => setStep('email')}
+        disabled={loading}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={20} color="#94a3b8" />
+        <Text style={styles.secondaryButtonText}>Change Email</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 
   const renderResetStep = () => (
     <Animated.View style={{ opacity: fadeAnim }}>
-      <View style={styles.welcomeContainer}>
-        <Text style={styles.welcomeTitle}>{t('resetPassword', 'auth')}</Text>
-        <Text style={styles.description}>
-          {t('enterNewPasswordInstructions', 'auth')}
-        </Text>
+      <View style={styles.iconContainer}>
+        <LinearGradient
+          colors={['rgba(41, 116, 255, 0.2)', 'rgba(41, 116, 255, 0.05)']}
+          style={styles.iconCircle}
+        >
+          <MaterialCommunityIcons name="lock-reset" size={60} color="#2974ff" />
+        </LinearGradient>
       </View>
 
-      <View style={styles.formContainer}>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>{t('newPassword', 'auth')}</Text>
-          <View style={styles.inputContainer}>
+      <Text style={styles.title}>Create New Password</Text>
+      <Text style={styles.subtitle}>
+        Your new password must be different from previous used passwords.
+      </Text>
+
+      <View style={styles.inputWrapper}>
+        <Text style={styles.label}>New Password</Text>
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons
+            name="lock-outline"
+            size={20}
+            color="#64748b"
+            style={styles.inputIcon}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor="#64748b"
+            secureTextEntry={!showPassword}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            editable={!loading}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeIcon}
+            disabled={loading}
+          >
             <MaterialCommunityIcons
-              name="lock-outline"
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={20}
               color="#64748b"
-              style={styles.inputIcon}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#64748b"
-              secureTextEntry={!showPassword}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              editable={!loading}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-              disabled={loading}
-            >
-              <MaterialCommunityIcons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="#64748b"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.hint}>{t('passwordHint', 'auth')}</Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>{t('confirmPassword', 'auth')}</Text>
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="lock-check-outline"
-              size={20}
-              color="#64748b"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#64748b"
-              secureTextEntry={!showConfirmPassword}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              editable={!loading}
-            />
-            <TouchableOpacity
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              style={styles.eyeIcon}
-              disabled={loading}
-            >
-              <MaterialCommunityIcons
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color="#64748b"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.signInButton, loading && styles.buttonDisabled]}
-          onPress={handleResetPassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <>
-              <Text style={styles.signInButtonText}>{t('resetPassword', 'auth')}</Text>
-              <MaterialCommunityIcons name="lock-reset" size={20} color="#ffffff" />
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.createAccountButton}
-          onPress={() => router.push('./login')}
-          disabled={loading}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#cbd5e1" />
-          <Text style={styles.createAccountButtonText}>{t('backToLogin', 'auth')}</Text>
-        </TouchableOpacity>
+        <Text style={styles.hint}>Minimum 6 characters</Text>
       </View>
+
+      <View style={styles.inputWrapper}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons
+            name="lock-check-outline"
+            size={20}
+            color="#64748b"
+            style={styles.inputIcon}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor="#64748b"
+            secureTextEntry={!showConfirmPassword}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            editable={!loading}
+          />
+          <TouchableOpacity
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            style={styles.eyeIcon}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons
+              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#64748b"
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.primaryButton, loading && styles.buttonDisabled]}
+        onPress={handleResetPassword}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Reset Password</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => router.push('./login')}
+        disabled={loading}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={20} color="#94a3b8" />
+        <Text style={styles.secondaryButtonText}>Back to Login</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 
@@ -463,35 +508,19 @@ export default function ForgotPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient
-        colors={['#0f1623', '#1a2634']}
-        style={styles.background}
-      >
-        <View style={styles.blurCircle1} />
-        <View style={styles.blurCircle2} />
+      <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.background}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
         
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <View style={{ width: 44 }} />
-          </View>
-
           <View style={styles.content}>
             {step === 'email' && renderEmailStep()}
             {step === 'verify' && renderVerifyStep()}
             {step === 'reset' && renderResetStep()}
           </View>
-
-          <Text style={styles.versionText}>Version 1.0.0</Text>
         </ScrollView>
       </LinearGradient>
     </KeyboardAvoidingView>
@@ -501,77 +530,49 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1623',
   },
   background: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  blurCircle1: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(41, 116, 255, 0.1)',
-    transform: [{ scale: 1.5 }],
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
-  blurCircle2: {
-    position: 'absolute',
-    bottom: -100,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(41, 116, 255, 0.1)',
-    transform: [{ scale: 1.5 }],
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(41, 116, 255, 0.3)',
   },
-  welcomeContainer: {
-    marginBottom: 30,
-  },
-  welcomeTitle: {
-    fontSize: 32,
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  description: {
+  subtitle: {
     fontSize: 16,
     color: '#94a3b8',
     textAlign: 'center',
-    lineHeight: 24,
+    marginBottom: 32,
+    lineHeight: 22,
   },
-  formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+  emailText: {
+    color: '#2974ff',
+    fontWeight: '600',
   },
   inputWrapper: {
     marginBottom: 20,
@@ -589,19 +590,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    height: 56,
   },
   inputIcon: {
-    padding: 12,
+    paddingHorizontal: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
-    paddingRight: 12,
+    height: '100%',
     color: '#ffffff',
     fontSize: 16,
+    paddingRight: 12,
   },
   eyeIcon: {
-    padding: 12,
+    paddingHorizontal: 12,
   },
   hint: {
     color: '#64748b',
@@ -612,6 +614,7 @@ const styles = StyleSheet.create({
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 32,
   },
   codeInput: {
     width: 48,
@@ -625,70 +628,54 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  signInButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  primaryButton: {
     backgroundColor: '#2974ff',
-    paddingVertical: 16,
+    height: 56,
     borderRadius: 12,
-    gap: 8,
-    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
     shadowColor: '#2974ff',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  signInButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    shadowRadius: 8,
+    elevation: 5,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-  createAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  createAccountButtonText: {
-    color: '#cbd5e1',
+  secondaryButton: {
+    flexDirection: 'row',
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  secondaryButtonText: {
+    color: '#94a3b8',
     fontSize: 14,
-    fontWeight: '600',
   },
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    gap: 4,
   },
-  rememberText: {
-    fontSize: 14,
+  resendText: {
     color: '#94a3b8',
+    fontSize: 14,
   },
-  forgotPassword: {
+  resendLink: {
+    color: '#2974ff',
     fontSize: 14,
     fontWeight: '600',
-    color: '#2974ff',
   },
   resendLinkDisabled: {
     color: '#64748b',
-  },
-  versionText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 20,
-    letterSpacing: 1,
   },
 });
