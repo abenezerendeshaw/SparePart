@@ -5,7 +5,22 @@ import { LanguageProvider } from '../context/LanguageContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
 
+import { registerForPushNotificationsAsync } from './lib/notificationService';
+import * as Notifications from 'expo-notifications';
+
 export default function RootLayout() {
+  React.useEffect(() => {
+    registerForPushNotificationsAsync();
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification clicked:', response);
+    });
+
+    return () => {
+      responseListener.remove();
+    };
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <LanguageProvider>

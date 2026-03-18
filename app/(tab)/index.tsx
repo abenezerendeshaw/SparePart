@@ -23,13 +23,15 @@ import {
   View,
   Linking,
   ScrollView,
-
+  Modal,
+  Image,
 } from 'react-native';
 
 import storage from '../lib/storage';
 import api from '../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { schedulePushNotification } from '../lib/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -93,6 +95,7 @@ export default function Dashboard() {
   const [userFullName, setUserFullName] = useState(t('trader', 'common'));
   const [userRole, setUserRole] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Animation values
   const scrollY = useSharedValue(0);
@@ -252,6 +255,29 @@ export default function Dashboard() {
       recentSales: sales.slice(0, 5)
     };
   }, [products, sales]);
+
+  // Check for sales milestone notifications
+  useEffect(() => {
+    const checkMilestones = async () => {
+      if (stats.todayRevenue >= 2000) {
+        const lastNotifiedStr = await storage.getItem('lastSalesMilestoneDate');
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        if (lastNotifiedStr !== todayStr) {
+          await schedulePushNotification(
+            t('success', 'common'),
+            `${t('todayRevenue', 'dashboard')}: ${t('currency', 'common')} ${stats.todayRevenue.toLocaleString()}! Let's go!`,
+            { type: 'sales_milestone' }
+          );
+          await storage.setItem('lastSalesMilestoneDate', todayStr);
+        }
+      }
+    };
+
+    if (!loading && stats.todayRevenue > 0) {
+      checkMilestones();
+    }
+  }, [stats.todayRevenue, loading]);
 
   const StatCard = ({ title, value, icon, colors, subtitle }: any) => (
     <LinearGradient
@@ -426,7 +452,7 @@ export default function Dashboard() {
           <LanguageSwitcher />
           <TouchableOpacity 
             style={styles.notificationButton}
-            onPress={() => Alert.alert(t('notifications', 'common'), t('noNotifications', 'common'))}
+            onPress={() => setShowNotifications(true)}
           >
             <MaterialCommunityIcons name="bell-outline" size={24} color="#ffffff" />
             {stats.lowStockCount > 0 && (
@@ -437,6 +463,80 @@ export default function Dashboard() {
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* Notifications Modal */}
+      <Modal
+        visible={showNotifications}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowNotifications(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNotifications(false)}
+        >
+          <View style={styles.notificationModalContainer}>
+            <View style={styles.notificationHeader}>
+              <View style={styles.notificationHeaderTitle}>
+                <MaterialCommunityIcons name="bell" size={20} color="#f59e0b" />
+                <Text style={styles.notificationTitle}>{t('notifications', 'common')}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowNotifications(false)}>
+                <MaterialCommunityIcons name="close" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.notificationList}
+              showsVerticalScrollIndicator={false}
+            >
+              {stats.lowStockCount > 0 ? (
+                products
+                  .filter(p => (p.total_stock || 0) <= 10)
+                  .map((product) => (
+                    <TouchableOpacity 
+                      key={product.id}
+                      style={styles.notificationItem}
+                      onPress={() => {
+                        setShowNotifications(false);
+                        router.push(`/(tab)/products/${product.id}`);
+                      }}
+                    >
+                      <View style={styles.notificationIcon}>
+                        <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
+                      </View>
+                      <View style={styles.notificationTextContainer}>
+                        <Text style={styles.notificationProductTitle}>{product.product_name}</Text>
+                        <Text style={styles.notificationProductDesc}>
+                          {t('lowStockWarning', 'dashboard')}: {product.total_stock} {product.unit || 'pcs'} {t('remaining', 'common')}
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={20} color="#475569" />
+                    </TouchableOpacity>
+                  ))
+              ) : (
+                <View style={styles.emptyNotification}>
+                  <MaterialCommunityIcons name="bell-off-outline" size={48} color="#475569" />
+                  <Text style={styles.emptyNotificationText}>{t('noNotifications', 'common')}</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {stats.lowStockCount > 0 && (
+              <TouchableOpacity 
+                style={styles.viewAllNotifications}
+                onPress={() => {
+                  setShowNotifications(false);
+                  router.push('/products?filter=low_stock');
+                }}
+              >
+                <Text style={styles.viewAllNotificationsText}>{t('viewAll', 'common')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
@@ -664,6 +764,19 @@ export default function Dashboard() {
         <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
           <MaterialCommunityIcons name="headset" size={20} color="#2974ff" />
           <Text style={styles.supportText}>{t('support', 'common')}</Text>
+        </TouchableOpacity>
+
+        {/* Demo Notification Trigger (Temporary) */}
+        <TouchableOpacity 
+          style={[styles.supportButton, { marginTop: 12, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }]} 
+          onPress={() => schedulePushNotification(
+            'Order Status',
+            'The purchase you ordered has arrived! 📦',
+            { type: 'order_arrival' }
+          )}
+        >
+          <MaterialCommunityIcons name="truck-delivery" size={20} color="#10b981" />
+          <Text style={[styles.supportText, { color: '#10b981' }]}>Simulate Order Arrival</Text>
         </TouchableOpacity>
         
         {/* Extra bottom padding for better scrolling */}
@@ -1153,5 +1266,99 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 110,
+    paddingRight: 20,
+  },
+  notificationModalContainer: {
+    width: width - 40,
+    maxWidth: 340,
+    backgroundColor: '#1a2634',
+    borderRadius: 16,
+    maxHeight: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  notificationHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notificationTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  notificationList: {
+    padding: 8,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    marginBottom: 8,
+  },
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificationTextContainer: {
+    flex: 1,
+  },
+  notificationProductTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  notificationProductDesc: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  emptyNotification: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyNotificationText: {
+    color: '#64748b',
+    fontSize: 14,
+    marginTop: 12,
+  },
+  viewAllNotifications: {
+    padding: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  viewAllNotificationsText: {
+    color: '#f59e0b',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
