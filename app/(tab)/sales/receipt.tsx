@@ -33,7 +33,6 @@ export default function SaleDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sale, setSale] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     console.log('🔷 useEffect triggered with id:', id);
@@ -151,20 +150,6 @@ ${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
     }
   };
 
-  const handleDelete = async () => {
-    setShowDeleteModal(false);
-    setLoading(true);
-    
-    try {
-      // Mock delete for now
-      Alert.alert(t('success'), t('saleDeleted', 'sales'));
-      router.back();
-    } catch (error: any) {
-      console.error('Error deleting sale:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -188,7 +173,8 @@ ${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
     switch (method) {
       case 'cash': return 'cash';
       case 'card': return 'credit-card';
-      case 'transfer': return 'bank-transfer';
+      case 'transfer':
+      case 'bank_transfer': return 'bank-transfer';
       default: return 'cash';
     }
   };
@@ -197,7 +183,8 @@ ${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
     switch (method) {
       case 'cash': return t('cash', 'sales');
       case 'card': return t('card', 'sales');
-      case 'transfer': return t('transfer', 'sales');
+      case 'transfer':
+      case 'bank_transfer': return t('transfer', 'sales');
       default: return method;
     }
   };
@@ -278,12 +265,6 @@ ${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
               onPress={handleShare}
             >
               <MaterialCommunityIcons name="share" size={22} color="#10b981" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerButton, styles.deleteButton]}
-              onPress={() => setShowDeleteModal(true)}
-            >
-              <MaterialCommunityIcons name="delete" size={22} color="#ef4444" />
             </TouchableOpacity>
           </View>
         </View>
@@ -443,37 +424,6 @@ ${t('due', 'common')}: ${sale.due_amount} ${t('currency', 'common')}
         </ScrollView>
       </SafeAreaView>
 
-      {/* Delete Modal */}
-      <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDeleteModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>{t('deleteSale', 'sales')}?</Text>
-            <Text style={styles.modalText}>
-              {t('deleteConfirm', 'sales')}
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowDeleteModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>{t('no', 'common')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmDeleteButton]}
-                onPress={handleDelete}
-              >
-                <Text style={styles.confirmDeleteText}>{t('yes', 'common')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </LinearGradient>
   );
 }
@@ -548,9 +498,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 8,
-  },
-  deleteButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   backButton: {
     backgroundColor: '#10b981',
@@ -795,62 +742,5 @@ const styles = StyleSheet.create({
   notesText: {
     color: '#ffffff',
     fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#1a2634',
-    borderRadius: 24,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-  },
-  modalTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  confirmDeleteButton: {
-    backgroundColor: '#ef4444',
-  },
-  confirmDeleteText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

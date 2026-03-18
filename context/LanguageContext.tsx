@@ -366,12 +366,12 @@ export const translations: Translations = {
       en: 'Inactive Products'
     },
     statusActive: {
-      am: 'በስራ ላይ',
-      en: 'Active'
+      am: 'በስራ ላይ ያሉ',
+      en: 'Active Products'
     },
     statusInactive: {
-      am: 'የታገዱ',
-      en: 'Inactive'
+      am: 'የታገዱ ምርቶች',
+      en: 'Inactive Products'
     },
     deletePermanent: {
       am: 'በትክክል ሰርዝ',

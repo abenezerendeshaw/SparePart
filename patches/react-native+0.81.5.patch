@@ -1,0 +1,27 @@
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+index 60f2a94..7bf016f 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+@@ -112,13 +112,15 @@ internal fun Window.enableEdgeToEdge() {
+     isNavigationBarContrastEnforced = true
+   }
+ 
+-  statusBarColor = Color.TRANSPARENT
+-  navigationBarColor =
+-      when {
+-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> Color.TRANSPARENT
+-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isDarkMode -> LightNavigationBarColor
+-        else -> DarkNavigationBarColor
+-      }
++  if (Build.VERSION.SDK_INT < 35) {
++    statusBarColor = Color.TRANSPARENT
++    navigationBarColor =
++        when {
++          Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> Color.TRANSPARENT
++          Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isDarkMode -> LightNavigationBarColor
++          else -> DarkNavigationBarColor
++        }
++  }
+ 
+   WindowInsetsControllerCompat(this, decorView).run {
+     isAppearanceLightNavigationBars = !isDarkMode

@@ -61,7 +61,7 @@ export default function SalesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week' | 'month' | 'paid' | 'due'>('all');
-  const [selectedPayment, setSelectedPayment] = useState<'all' | 'cash' | 'credit'>('all');
+  const [selectedPayment, setSelectedPayment] = useState<'all' | 'cash' | 'card' | 'transfer' | 'bank_transfer'>('all');
   const [stats, setStats] = useState<SalesStats>({
     totalSales: 0,
     todaySales: 0,
@@ -165,8 +165,9 @@ export default function SalesScreen() {
       todayRevenue: todaySales.reduce((sum, s) => sum + Number(s.grand_total), 0),
       totalProfit,
       averageSaleValue: salesData.length > 0 ? totalRevenue / salesData.length : 0,
-      cashSales: cashSales.length,
-      creditSales: creditSales.length,
+      cashSales: salesData.filter(s => s.payment_method === 'cash').length,
+      creditSales: salesData.filter(s => s.payment_method === 'card').length + 
+                   salesData.filter(s => s.payment_method === 'transfer' || s.payment_method === 'bank_transfer').length,
     });
   };
 
@@ -210,6 +211,26 @@ export default function SalesScreen() {
 
     return matchesSearch && matchesDate && matchesPayment;
   });
+
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method?.toLowerCase()) {
+      case 'cash': return 'cash';
+      case 'card': return 'credit-card';
+      case 'transfer':
+      case 'bank_transfer': return 'bank-transfer';
+      default: return 'cash-multiple';
+    }
+  };
+
+  const getPaymentMethodText = (method: string) => {
+    switch (method?.toLowerCase()) {
+      case 'cash': return t('cash', 'sales');
+      case 'card': return t('card', 'sales');
+      case 'transfer':
+      case 'bank_transfer': return t('transfer', 'sales');
+      default: return method || t('other', 'common');
+    }
+  };
 
   const SaleCard = ({ item }: { item: Sale }) => {
     const isToday = item.sale_date === new Date().toISOString().split('T')[0];
@@ -273,12 +294,12 @@ export default function SalesScreen() {
 
             <View style={styles.detailItem}>
               <MaterialCommunityIcons 
-                name={item.payment_method === 'cash' ? 'cash' : 'credit-card'} 
+                name={getPaymentMethodIcon(item.payment_method)} 
                 size={14} 
                 color="#10b981" 
               />
               <Text style={styles.detailText}>
-                {item.payment_method === 'cash' ? t('cash', 'sales') : t('card', 'sales')}
+                {getPaymentMethodText(item.payment_method)}
               </Text>
             </View>
 
@@ -510,12 +531,21 @@ export default function SalesScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.paymentFilterButton, selectedPayment === 'credit' && styles.activePaymentFilter]}
-              onPress={() => setSelectedPayment('credit')}
+              style={[styles.paymentFilterButton, selectedPayment === 'card' && styles.activePaymentFilter]}
+              onPress={() => setSelectedPayment(selectedPayment === 'card' ? 'all' : 'card')}
             >
-              <MaterialCommunityIcons name="credit-card" size={14} color={selectedPayment === 'credit' ? '#ffffff' : '#64748b'} />
-              <Text style={[styles.paymentFilterText, selectedPayment === 'credit' && styles.activePaymentFilterText]}>
+              <MaterialCommunityIcons name="credit-card" size={14} color={selectedPayment === 'card' ? '#ffffff' : '#64748b'} />
+              <Text style={[styles.paymentFilterText, selectedPayment === 'card' && styles.activePaymentFilterText]}>
                 {t('card', 'sales')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.paymentFilterButton, (selectedPayment === 'transfer' || selectedPayment === 'bank_transfer') && styles.activePaymentFilter]}
+              onPress={() => setSelectedPayment(selectedPayment === 'bank_transfer' ? 'all' : 'bank_transfer')}
+            >
+              <MaterialCommunityIcons name="bank-transfer" size={14} color={(selectedPayment === 'transfer' || selectedPayment === 'bank_transfer') ? '#ffffff' : '#64748b'} />
+              <Text style={[styles.paymentFilterText, (selectedPayment === 'transfer' || selectedPayment === 'bank_transfer') && styles.activePaymentFilterText]}>
+                {t('transfer', 'sales')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -900,7 +930,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 120,
     right: 20,
     width: 56,
     height: 56,

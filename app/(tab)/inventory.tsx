@@ -444,7 +444,7 @@ export default function InventoryScreen() {
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.statusFilterContainer}
-          contentContainerStyle={{ paddingRight: 20 }}
+          contentContainerStyle={{ paddingRight: 20, marginBottom : 20 }}
         >
           {['all', 'active', 'inactive'].map((status) => (
             <TouchableOpacity
@@ -479,7 +479,7 @@ export default function InventoryScreen() {
         </ScrollView>
 
         {/* Category Filter Chips */}
-        <ScrollView 
+        {/* <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.categoryContainer}
@@ -501,7 +501,7 @@ export default function InventoryScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </ScrollView> */}
 
         {/* Inventory List */}
         <View style={styles.inventoryList}>

@@ -277,7 +277,7 @@ export default function AddSaleScreen() {
             },
             {
               text: t('viewReceipt', 'sales'),
-              onPress: () => router.push(`/sales/receipt/${response.data.data.sale_id}`),
+              onPress: () => router.push(`/sales/receipt?id=${response.data.data.id}`),
             },
           ]
         );
@@ -309,7 +309,7 @@ export default function AddSaleScreen() {
     >
       <View style={styles.sectionHeaderLeft}>
         <MaterialCommunityIcons 
-          name={icon} 
+          name={icon as any} 
           size={20} 
           color={expandedSections[section] ? '#10b981' : '#94a3b8'} 
         />
@@ -677,7 +677,7 @@ export default function AddSaleScreen() {
                       {[
                         { value: 'cash', label: t('cash', 'sales'), icon: 'cash' },
                         { value: 'card', label: t('card', 'sales'), icon: 'credit-card' },
-                        { value: 'transfer', label: t('transfer', 'sales'), icon: 'bank-transfer' },
+                        { value: 'bank_transfer', label: t('transfer', 'sales'), icon: 'bank-transfer' },
                         { value: 'other', label: t('other', 'common'), icon: 'dots-horizontal' },
                       ].map((method) => (
                         <TouchableOpacity
@@ -689,7 +689,7 @@ export default function AddSaleScreen() {
                           onPress={() => handleInputChange('payment_method', method.value)}
                         >
                           <MaterialCommunityIcons 
-                            name={method.icon} 
+                            name={method.icon as any} 
                             size={20} 
                             color={form.payment_method === method.value ? '#ffffff' : '#94a3b8'} 
                           />
@@ -1313,8 +1313,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 16,
     gap: 8,
-    marginTop: 24,
-    marginBottom: 20,
+    marginTop: 5,
+    marginBottom: 80,
     shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

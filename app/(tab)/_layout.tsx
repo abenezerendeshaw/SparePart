@@ -40,7 +40,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: 20,
+          bottom: 35,
           left: 10,
           right: 10,
           height: 70,

@@ -1,0 +1,26 @@
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt
+index 7af40fa..1ea6025 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt
+@@ -113,8 +113,10 @@ object ScreenWindowTraits {
+                     val curColor: Int = window.statusBarColor
+                     val colorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), curColor, color)
+                     colorAnimation.addUpdateListener { animator ->
++                    if (Build.VERSION.SDK_INT < 35) {
+                         window.statusBarColor = animator.animatedValue as Int
+                     }
++                    }
+                     if (animated) {
+                         colorAnimation.setDuration(300).startDelay = 0
+                     } else {
+@@ -221,7 +223,9 @@ object ScreenWindowTraits {
+             WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars =
+                 isColorLight(color)
+         }
+-        window.navigationBarColor = color
++        if (Build.VERSION.SDK_INT < 35) {
++            window.navigationBarColor = color
++        }
+     }
+ 
+     @Deprecated(
