@@ -5,9 +5,9 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity,
 ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import api from '../lib/api';
 import storage from '../lib/storage';
 import Animated, {
   useSharedValue,
@@ -38,6 +38,8 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const params = useLocalSearchParams();
+  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive'>((params.status as 'active' | 'inactive') || 'active');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -78,9 +80,14 @@ export default function InventoryScreen() {
     };
   });
 
-  useEffect(() => {
-    fetchInventory();
-  }, []);
+  // fetchInventory is now handled by useFocusEffect
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchInventory();
+    }, [])
+  );
 
   const fetchInventory = async () => {
     try {
@@ -90,21 +97,19 @@ export default function InventoryScreen() {
         return;
       }
 
-      const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const response = await api.get('/products?limit=100');
+      console.log(`Fetching inventory with status: ${selectedStatus}`);
+      const response = await api.get(`/products?limit=100&status=${selectedStatus}`);
       const productsData = response.data?.data?.products || [];
       
-      setProducts(productsData);
+      // Filter based on selected status
+      const filteredData = productsData.filter((p: any) => 
+        p.status?.toLowerCase() === selectedStatus.toLowerCase()
+      );
+
+      setProducts(filteredData);
       
-      // Extract unique categories
-      const uniqueCategories = ['all', ...new Set(productsData.map((p: Product) => p.category).filter(Boolean))];
+      // Extract unique categories from products
+      const uniqueCategories = ['all', ...new Set(filteredData.map((p: Product) => p.category).filter(Boolean))] as string[];
       setCategories(uniqueCategories);
 
     } catch (error) {
@@ -114,6 +119,51 @@ export default function InventoryScreen() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // Re-fetch when selectedStatus changes
+  useEffect(() => {
+    fetchInventory();
+  }, [selectedStatus]);
+
+  // Handle status param from outside
+  useEffect(() => {
+    if (params.status && (params.status === 'active' || params.status === 'inactive')) {
+      setSelectedStatus(params.status as 'active' | 'inactive');
+    }
+  }, [params.status]);
+
+  const handlePermanentDelete = async (productId: number) => {
+    Alert.alert(
+      t('permanentlyDeleteConfirmTitle', 'common'),
+      t('permanentlyDeleteConfirmMessage', 'common'),
+      [
+        { text: t('cancel', 'common'), style: 'cancel' },
+        { 
+          text: t('deletePermanent', 'common'), 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const response = await api.delete(`/products?id=${productId}`);
+              
+              if (response.data?.status === 'success') {
+                Alert.alert(t('success'), t('deleteSuccess', 'common'));
+                fetchInventory();
+              } else {
+                throw new Error(response.data?.message || 'Delete failed');
+              }
+            } catch (error: any) {
+              console.error('Permanent delete failed:', error);
+              const message = error.response?.data?.message || error.message || t('deleteFailed', 'common');
+              Alert.alert(t('error'), message);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const onRefresh = () => {
@@ -211,7 +261,17 @@ export default function InventoryScreen() {
           <Text style={styles.stockValue}>
             {t('totalValue', 'inventory')}: {t('currency', 'common')} {(stockLevel * Number(item.selling_price)).toLocaleString()}
           </Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color="#64748b" />
+          <View style={styles.cardActions}>
+            {selectedStatus === 'inactive' && (
+              <TouchableOpacity 
+                style={styles.deleteIconButton} 
+                onPress={() => handlePermanentDelete(item.id)}
+              >
+                <MaterialCommunityIcons name="delete-forever" size={22} color="#ef4444" />
+              </TouchableOpacity>
+            )}
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#64748b" />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -240,21 +300,34 @@ export default function InventoryScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('inventoryManagement', 'inventory')}</Text>
+        <Text style={styles.headerTitle}>
+          {selectedStatus === 'active' ? t('inventoryManagement', 'inventory') : t('inactiveProducts', 'common')}
+        </Text>
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => {
             Alert.alert(
               t('filter', 'common'),
               t('selectCategory', 'inventory'),
-              categories.map(cat => ({
-                text: cat === 'all' ? t('all', 'common') : cat,
-                onPress: () => setSelectedCategory(cat),
-              })).concat([{ text: t('cancel', 'common'), style: 'cancel' }])
+              ([
+                { 
+                  text: selectedStatus === 'active' ? `📂 ${t('inactiveProducts', 'common')}` : `✅ ${t('active', 'addProduct')}`, 
+                  onPress: () => setSelectedStatus(selectedStatus === 'active' ? 'inactive' : 'active') 
+                },
+                ...categories.map(cat => ({
+                  text: cat === 'all' ? t('all', 'common') : cat,
+                  onPress: () => setSelectedCategory(cat),
+                })),
+                { text: t('cancel', 'common'), style: 'cancel' }
+              ] as any[])
             );
           }}
         >
-          <MaterialCommunityIcons name="filter-variant" size={24} color="#10b981" />
+          <MaterialCommunityIcons 
+            name={selectedStatus === 'active' ? "filter-variant" : "archive-eye-outline"} 
+            size={24} 
+            color={selectedStatus === 'active' ? "#10b981" : "#f59e0b"} 
+          />
         </TouchableOpacity>
       </Animated.View>
 
@@ -359,8 +432,14 @@ export default function InventoryScreen() {
 
           {filteredProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="package-variant" size={48} color="#475569" />
-              <Text style={styles.emptyText}>{t('noProducts', 'common')}</Text>
+              <MaterialCommunityIcons 
+                name={selectedStatus === 'active' ? "package-variant" : "archive-off-outline"} 
+                size={48} 
+                color="#475569" 
+              />
+              <Text style={styles.emptyText}>
+                {selectedStatus === 'active' ? t('noProducts', 'common') : t('noInactiveProducts', 'inventory')}
+              </Text>
             </View>
           ) : (
             filteredProducts.map((item) => (
@@ -592,6 +671,16 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 14,
     fontWeight: '600',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteIconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   emptyContainer: {
     alignItems: 'center',

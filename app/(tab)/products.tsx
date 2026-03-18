@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import storage from '../lib/storage';
 import Animated, {
   useSharedValue,
@@ -101,14 +101,6 @@ export default function ProductsScreen() {
 
       console.log('Fetching products...');
       
-      const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
       // Only fetch active products (not deleted)
       const response = await api.get('/products?limit=100&status=active');
       console.log('Products response:', response.data);
@@ -127,7 +119,7 @@ export default function ProductsScreen() {
         activeProducts
           .map((p: Product) => p.category)
           .filter(Boolean)
-      )];
+      )] as string[];
       setCategories(uniqueCategories);
 
       // Clear deleted products set when fetching new data
@@ -207,16 +199,17 @@ export default function ProductsScreen() {
         style={[styles.productCard, isDeleting && styles.deletingCard]}
         onPress={() => router.push(`/(tab)/products/${item.id}`)}
         onLongPress={() => {
-          Alert.alert(
-            t('productOptions', 'products'),
-            item.product_name,
-            [
-              { text: t('edit', 'common'), onPress: () => router.push(`/(tab)/products/${item.id}/edit`) },
-              { text: t('duplicate', 'products'), onPress: () => router.push(`/(tab)/products/add?copy=${item.id}`) },
-              { text: t('delete', 'common'), style: 'destructive', onPress: () => confirmDelete(item.id) },
-              { text: t('cancel', 'common'), style: 'cancel' }
-            ]
-          );
+            Alert.alert(
+              t('productOptions', 'products'),
+              item.product_name,
+              [
+                { text: t('viewDetails', 'common'), onPress: () => router.push(`/(tab)/products/${item.id}`) },
+                { text: t('edit', 'common'), onPress: () => router.push(`/(tab)/products/${item.id}/edit`) },
+                { text: t('duplicate', 'products'), onPress: () => router.push(`/(tab)/products/add?copy=${item.id}`) },
+                { text: t('inactivate', 'common'), style: 'destructive', onPress: () => confirmInactivate(item.id, item.product_name) },
+                { text: t('cancel', 'common'), style: 'cancel' }
+              ]
+            );
         }}
         disabled={isDeleting}
       >
@@ -284,7 +277,7 @@ export default function ProductsScreen() {
           {isDeleting && (
             <View style={styles.deleteOverlay}>
               <ActivityIndicator size="large" color="#ef4444" />
-              <Text style={styles.deleteOverlayText}>{t('deleting', 'common')}</Text>
+              <Text style={styles.deleteOverlayText}>{t('inactivating', 'common')}</Text>
             </View>
           )}
         </LinearGradient>
@@ -292,76 +285,55 @@ export default function ProductsScreen() {
     );
   };
 
-  const confirmDelete = (id: number) => {
+  const confirmInactivate = (id: number, name: string) => {
     Alert.alert(
-      t('deleteProduct', 'products'),
-      t('deleteConfirm', 'products'),
+      t('inactivateConfirmTitle', 'common'),
+      `${t('inactivateConfirmMessage', 'common')} "${name}"?`,
       [
         { text: t('cancel', 'common'), style: 'cancel' },
         { 
-          text: t('delete', 'common'), 
+          text: t('inactivate', 'common'), 
           style: 'destructive',
-          onPress: () => deleteProduct(id)
+          onPress: () => inactivateProduct(id) 
         }
       ]
     );
   };
 
-  const deleteProduct = async (id: number) => {
+  const inactivateProduct = async (id: number) => {
     setDeleteLoading(id);
     
     try {
       const token = await storage.getItem('authToken');
-      const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      console.log('Deleting product with ID:', id);
-      
-      // Try both formats
-      let response;
-      try {
-        // First try /:id format
-        response = await api.delete(`/products/${id}`);
-        console.log('Delete response (/:id):', response.data);
-      } catch (err) {
-        // If /:id fails, try ?id= format
-        console.log('Trying ?id= format...');
-        response = await api.delete(`/products?id=${id}`);
-        console.log('Delete response (?id=):', response.data);
+      if (!token) {
+        router.replace('/auth/login');
+        return;
       }
+
+      console.log('Inactivating product with ID:', id);
       
+      const response = await api.put(`/products?id=${id}`, { status: 'inactive' });
+      console.log('Inactivate response:', response.data);
+
       if (response.data && response.data.status === 'success') {
-        // Mark as deleted in local state immediately
-        setDeletedProducts(prev => new Set([...prev, id]));
-        
-        // Also filter it out from the products array
-        setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
-        
-        Alert.alert(t('success'), t('productDeleted', 'products'));
-        
-        // Refresh from server after a short delay to ensure sync
-        setTimeout(() => {
-          fetchProducts();
-        }, 500);
+        fetchProducts();
+        Alert.alert(
+          t('success'), 
+          t('inactivateSuccess', 'common'),
+          [
+            { text: t('close', 'common'), style: 'cancel' },
+            { 
+              text: t('inactiveProducts', 'common'), 
+              onPress: () => router.push('/(tab)/inventory?status=inactive') 
+            }
+          ]
+        );
       } else {
-        throw new Error('Delete failed');
+        throw new Error('Inactivate failed');
       }
     } catch (error: any) {
-      console.error('Delete error:', error);
-      
-      let errorMessage = t('deleteFailed', 'products');
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert(t('error'), errorMessage);
-      
-      // Remove loading state
-      setDeleteLoading(null);
+      console.error('Error inactivating product:', error);
+      Alert.alert(t('error'), error.response?.data?.message || t('inactivateFailed', 'common'));
     } finally {
       setDeleteLoading(null);
     }

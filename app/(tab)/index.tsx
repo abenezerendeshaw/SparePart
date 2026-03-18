@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,11 +22,12 @@ import {
   TouchableOpacity,
   View,
   Linking,
-  ScrollView
+  ScrollView,
+
 } from 'react-native';
 
 import storage from '../lib/storage';
-import axios from 'axios';
+import api from '../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
@@ -42,6 +43,7 @@ interface Product {
   total_stock: number;
   selling_price: string | number;
   status: string;
+  unit?: string;
 }
 
 interface Sale {
@@ -137,27 +139,7 @@ export default function Dashboard() {
     };
   });
 
-  const fabAnimatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollY.value,
-      [0, 200],
-      [1, 0.9],
-      Extrapolate.CLAMP
-    );
-
-    const translateY = interpolate(
-      scrollY.value,
-      [0, 200],
-      [0, 10],
-      Extrapolate.CLAMP
-    );
-
-    return {
-      transform: [{ scale }, { translateY }],
-      opacity: headerOpacity.value,
-    };
-  });
-
+  
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -193,6 +175,13 @@ export default function Dashboard() {
     }
   };
 
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
   const fetchData = async () => {
     try {
       const token = await storage.getItem('authToken');
@@ -204,34 +193,29 @@ export default function Dashboard() {
 
       await fetchUserData();
 
-      const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const productsResponse = await api.get('/products?limit=100');
+      const productsResponse = await api.get('/products?limit=100&status=active');
       
       let salesResponse = { data: { data: { sales: [] } } };
       try {
         salesResponse = await api.get('/sales?limit=50');
         console.log('Sales fetched:', salesResponse.data?.data?.sales?.length || 0);
-      } catch (salesError) {
+      } catch (salesError: any) {
         console.log('Sales fetch failed:', salesError.message);
       }
 
       const productsData = productsResponse.data?.data?.products || [];
-      const salesData = salesResponse.data?.data?.sales || [];
+      const salesData = (salesResponse.data as any)?.data?.sales || [];
+      
+      // Filter out any products with status 'deleted' or 'inactive' to match products.tsx logic
+      const activeProductsData = productsData.filter((p: any) => 
+        p.status === 'active' || p.status === 'Active'
+      );
 
-      setProducts(productsData);
+      setProducts(activeProductsData);
       setSales(salesData);
 
-      if (salesData.length > 0 && salesData[0].cashier_name && userFullName === t('trader', 'common')) {
-        setUserFullName(salesData[0].cashier_name);
+      if (salesData.length > 0 && (salesData[0] as any).cashier_name && userFullName === t('trader', 'common')) {
+        setUserFullName((salesData[0] as any).cashier_name);
       }
 
     } catch (error: any) {
@@ -243,32 +227,31 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Removed redundant fetchData useEffect as useFocusEffect handles it
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
   };
 
-  // Calculate today's revenue
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todaySales = sales.filter(sale => sale.sale_date === todayStr);
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + Number(sale.grand_total), 0);
+  // Calculate statistics using useMemo for better performance
+  const stats: DashboardStats = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaySalesItems = sales.filter(sale => sale.sale_date === todayStr);
+    const todayRevenueValue = todaySalesItems.reduce((sum, sale) => sum + Number(sale.grand_total), 0);
 
-  // Calculate statistics
-  const stats: DashboardStats = {
-    totalProducts: products.length,
-    totalStock: products.reduce((sum, item) => sum + (Number(item.total_stock) || 0), 0),
-    totalSales: sales.length,
-    totalRevenue: sales.reduce((sum, sale) => sum + (Number(sale.grand_total) || 0), 0),
-    lowStockCount: products.filter(p => (p.total_stock || 0) <= 10).length,
-    todaySales: todaySales.length,
-    todayRevenue: todayRevenue,
-    recentProducts: products.slice(0, 10),
-    recentSales: sales.slice(0, 5)
-  };
+    return {
+      totalProducts: products.length,
+      totalStock: products.reduce((sum, item) => sum + (Number(item.total_stock) || 0), 0),
+      totalSales: sales.length,
+      totalRevenue: sales.reduce((sum, sale) => sum + (Number(sale.grand_total) || 0), 0),
+      lowStockCount: products.filter(p => (p.total_stock || 0) <= 10).length,
+      todaySales: todaySalesItems.length,
+      todayRevenue: todayRevenueValue,
+      recentProducts: products.slice(0, 10),
+      recentSales: sales.slice(0, 5)
+    };
+  }, [products, sales]);
 
   const StatCard = ({ title, value, icon, colors, subtitle }: any) => (
     <LinearGradient
@@ -347,6 +330,7 @@ export default function Dashboard() {
   };
 
   const SaleItem = ({ item }: { item: Sale }) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const isToday = item.sale_date === todayStr;
     
     return (
@@ -686,26 +670,7 @@ export default function Dashboard() {
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
 
-      {/* Animated Floating Action Button */}
-      <Animated.View style={[styles.fabContainer, fabAnimatedStyle]}>
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => {
-            Alert.alert(
-              t('quickAction', 'common'),
-              t('quickActionMessage', 'common'),
-              [
-                { text: t('addProduct', 'addProduct'), onPress: () => router.push('/(tab)/products/add') },
-                { text: t('newSale', 'common'), onPress: () => router.push('/(tab)/sales/new') },
-                { text: t('support', 'common'), onPress: handleContactSupport },
-                { text: t('cancel', 'common'), style: 'cancel' }
-              ]
-            );
-          }}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
-        </TouchableOpacity>
-      </Animated.View>
+
     </LinearGradient>
   );
 }
@@ -1110,26 +1075,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     letterSpacing: 1,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    zIndex: 100,
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2974ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#2974ff',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    marginBottom: 20,
-  },
+
+  
   scrollContent: {
     paddingBottom: 20,
   },

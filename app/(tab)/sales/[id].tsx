@@ -57,7 +57,6 @@ export default function SaleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sale, setSale] = useState<Sale | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchSaleDetails();
@@ -136,30 +135,7 @@ ${t('paymentStatus', 'sales')}: ${getStatusText(sale.payment_status)}
     }
   };
 
-  const handleDelete = async () => {
-    setShowDeleteModal(false);
-    setLoading(true);
-    
-    try {
-      const token = await storage.getItem('authToken');
-      if (!token) {
-        router.replace('/auth/login');
-        return;
-      }
-
-      const response = await api.delete(`/sales?id=${id}`);
-
-      if (response.data.status === 'success') {
-        Alert.alert(t('success'), t('saleDeleted', 'sales'));
-        router.back();
-      }
-    } catch (error: any) {
-      console.error('Error deleting sale:', error);
-      Alert.alert(t('error'), error.response?.data?.message || t('saleDeleteFailed', 'sales'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // handleDelete removed for security reasons
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -263,12 +239,6 @@ ${t('paymentStatus', 'sales')}: ${getStatusText(sale.payment_status)}
             onPress={handleShare}
           >
             <MaterialCommunityIcons name="share" size={22} color="#10b981" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerButton, styles.deleteButton]}
-            onPress={() => setShowDeleteModal(true)}
-          >
-            <MaterialCommunityIcons name="delete" size={22} color="#ef4444" />
           </TouchableOpacity>
         </View>
       </View>
@@ -459,37 +429,7 @@ ${t('paymentStatus', 'sales')}: ${getStatusText(sale.payment_status)}
         </View>
       </ScrollView>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDeleteModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>{t('deleteSale', 'sales')}?</Text>
-            <Text style={styles.modalText}>
-              {t('deleteConfirm', 'sales')}
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowDeleteModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>{t('no', 'common')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmDeleteButton]}
-                onPress={handleDelete}
-              >
-                <Text style={styles.confirmDeleteText}>{t('yes', 'common')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Delete Confirmation Modal removed */}
     </LinearGradient>
   );
 }

@@ -40,22 +40,22 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: 30,
-          left: 16,
-          right: 16,
-          height: 65,
+          bottom: 20,
+          left: 10,
+          right: 10,
+          height: 70,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
-          borderRadius: 10,
-          marginHorizontal: 10,
+          borderRadius: 20,
+          marginHorizontal: 5,
           shadowColor: '#2974ff',
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.5,
-          shadowRadius: 15,
-          elevation: 15,
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+          elevation: 10,
           borderWidth: 1,
-          borderColor: 'rgba(41, 116, 255, 0.3)',
+          borderColor: 'rgba(41, 116, 255, 0.2)',
         },
 
         tabBarBackground: () => (
@@ -64,22 +64,22 @@ export default function TabLayout() {
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(41, 116, 255, 0.2)',
-                  transform: [{ scale: 1.05 }],
-                  opacity: 0.6,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(41, 116, 255, 0.1)',
+                  transform: [{ scale: 1.02 }],
+                  opacity: 0.4,
                 },
               ]}
             />
 
             <BlurView
-              intensity={95}
+              intensity={90}
               tint="dark"
-              style={[StyleSheet.absoluteFill, { borderRadius: 6, overflow: 'hidden' }]}
+              style={[StyleSheet.absoluteFill, { borderRadius: 20, overflow: 'hidden' }]}
             >
               <LinearGradient
-                colors={['rgba(15, 22, 35, 0.95)', 'rgba(26, 38, 52, 0.98)']}
-                style={[StyleSheet.absoluteFill, { borderRadius: 6 }]}
+                colors={['rgba(15, 22, 35, 0.92)', 'rgba(26, 38, 52, 0.95)']}
+                style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
               />
             </BlurView>
 
@@ -87,10 +87,10 @@ export default function TabLayout() {
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  borderRadius: 6,
+                  borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: 'rgba(41, 116, 255, 0.5)',
-                  opacity: 0.8,
+                  borderColor: 'rgba(41, 116, 255, 0.4)',
+                  opacity: 0.6,
                 },
               ]}
             />
@@ -98,18 +98,20 @@ export default function TabLayout() {
         ),
 
         tabBarActiveTintColor: '#2974ff',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarInactiveTintColor: '#94a3b8',
         tabBarShowLabel: true,
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginBottom: 8,
+          fontSize: 10,
+          fontWeight: '700',
+          marginBottom: 10,
         },
         tabBarIconStyle: {
-          marginTop: 8,
+          marginTop: 6,
         },
         tabBarItemStyle: {
-          paddingVertical: 5,
+          height: 65,
+          paddingVertical: 2,
         },
       }}
     >

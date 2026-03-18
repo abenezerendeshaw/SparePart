@@ -1,9 +1,9 @@
 import { StatusBar,View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import api from '../lib/api';
 import storage from '../lib/storage';
 import Animated, {
   useSharedValue,
@@ -114,6 +114,13 @@ export default function SalesScreen() {
     fetchSales();
   }, []);
 
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchSales();
+    }, [])
+  );
+
   const fetchSales = async () => {
     try {
       const token = await storage.getItem('authToken');
@@ -121,14 +128,6 @@ export default function SalesScreen() {
         router.replace('/auth/login');
         return;
       }
-
-      const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
 
       const response = await api.get('/sales?limit=100');
       const salesData = response.data?.data?.sales || [];
@@ -224,17 +223,6 @@ export default function SalesScreen() {
       <TouchableOpacity 
         style={styles.saleCard}
         onPress={() => router.push(`/(tab)/sales/${item.id}`)}
-        onLongPress={() => {
-          Alert.alert(
-            t('saleOptions', 'sales'),
-            item.sale_code,
-            [
-              { text: t('viewDetails', 'common'), onPress: () => router.push(`/(tab)/sales/${item.id}`) },
-              { text: t('printReceipt', 'sales'), onPress: () => handlePrintReceipt(item) },
-              { text: t('cancel', 'common'), style: 'cancel' }
-            ]
-          );
-        }}
       >
         <LinearGradient
           colors={['rgba(245, 158, 11, 0.1)', 'rgba(15, 22, 35, 0.9)']}

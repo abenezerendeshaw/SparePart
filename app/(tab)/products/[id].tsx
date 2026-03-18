@@ -57,7 +57,7 @@ export default function ProductDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showInactivateModal, setShowInactivateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingField, setEditingField] = useState<{field: string; value: string; label: string} | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -141,19 +141,19 @@ export default function ProductDetailScreen() {
       const shareMessage = `
 *${product.product_name}* - ${t('title', 'productDetail')}
 
-📋 ${t('sections', 'productDetail').categoryBrand}:
+📋 ${t('categoryBrand', 'productDetail')}:
 ${t('productCode', 'addProduct')}: ${product.product_code}
 ${t('category', 'addProduct')}: ${product.category || t('none', 'common')}
 ${t('brand', 'addProduct')}: ${product.brand || t('none', 'common')}
 ${t('unit', 'addProduct')}: ${product.unit}
 
-📦 ${t('sections', 'productDetail').currentStock}:
+📦 ${t('currentStock', 'productDetail')}:
 ${t('totalStock', 'addProduct')}: ${product.total_stock} ${product.unit}
 ${t('minStock', 'addProduct')}: ${product.min_stock} ${product.unit}
 ${t('maxStock', 'addProduct')}: ${product.max_stock} ${product.unit}
 ${t('soldQuantity', 'addProduct')}: ${product.selling_quantity} ${product.unit}
 
-💰 ${t('sections', 'productDetail').prices}:
+💰 ${t('prices', 'productDetail')}:
 ${t('buyingPrice', 'addProduct')}: ${product.buying_price} ${t('currency', 'common')}
 ${t('sellingPrice', 'addProduct')}: ${product.selling_price} ${t('currency', 'common')}
 ${t('profit', 'addProduct')}: ${product.profit} ${t('currency', 'common')}
@@ -173,7 +173,7 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
     }
   };
 
-  const handleDelete = async () => {
+  const handleInactivate = async () => {
     setDeleteLoading(true);
     
     try {
@@ -183,29 +183,33 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
         return;
       }
 
-      console.log('Attempting to delete product with ID:', id);
+      console.log('Attempting to inactivate product with ID:', id);
       
-      const response = await api.delete(`/products?id=${id}`);
-      console.log('Delete response:', response.data);
+      const response = await api.put(`/products?id=${id}`, { status: 'inactive' });
+      console.log('Inactivate response:', response.data);
 
       if (response.data && response.data.status === 'success') {
         Alert.alert(
           t('success'), 
-          t('deleteSuccess', 'common'),
+          t('inactivateSuccess', 'common'),
           [
             { 
-              text: t('backToProducts', 'common'), 
+              text: t('close', 'common'), 
               onPress: () => router.back() 
+            },
+            { 
+              text: t('inactiveProducts', 'common'), 
+              onPress: () => router.replace('/(tab)/inventory?status=inactive') 
             }
           ]
         );
       } else {
-        throw new Error('Delete failed');
+        throw new Error('Inactivate failed');
       }
     } catch (error: any) {
-      console.error('Error deleting product:', error);
+      console.error('Error inactivating product:', error);
       
-      let errorMessage = t('deleteFailed', 'common');
+      let errorMessage = t('inactivateFailed', 'common');
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
@@ -215,7 +219,7 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
       Alert.alert(t('error'), errorMessage);
     } finally {
       setDeleteLoading(false);
-      setShowDeleteModal(false);
+      setShowInactivateModal(false);
     }
   };
 
@@ -279,16 +283,16 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
   };
 
   const getStockStatus = () => {
-    if (!product) return { color: '#64748b', text: t('none', 'common'), icon: 'help' };
+    if (!product) return { color: '#64748b', text: t('none', 'common'), icon: 'help' as const };
     
     if (product.total_stock === 0) {
-      return { color: '#ef4444', text: t('outOfStock', 'common'), icon: 'alert-circle' };
+      return { color: '#ef4444', text: t('outOfStock', 'common'), icon: 'alert-circle' as const };
     } else if (product.total_stock <= product.min_stock) {
-      return { color: '#f59e0b', text: t('critical', 'common'), icon: 'alert' };
+      return { color: '#f59e0b', text: t('critical', 'common'), icon: 'alert' as const };
     } else if (product.total_stock <= product.min_stock * 1.5) {
-      return { color: '#f59e0b', text: t('low', 'common'), icon: 'alert' };
+      return { color: '#f59e0b', text: t('low', 'common'), icon: 'alert' as const };
     } else {
-      return { color: '#10b981', text: t('normal', 'common'), icon: 'check-circle' };
+      return { color: '#10b981', text: t('normal', 'common'), icon: 'check-circle' as const };
     }
   };
 
@@ -357,13 +361,13 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerButton, styles.deleteButton]}
-            onPress={() => setShowDeleteModal(true)}
+            onPress={() => setShowInactivateModal(true)}
             disabled={deleteLoading}
           >
             {deleteLoading ? (
               <ActivityIndicator size="small" color="#ef4444" />
             ) : (
-              <MaterialCommunityIcons name="delete" size={22} color="#ef4444" />
+              <MaterialCommunityIcons name="archive-arrow-down" size={22} color="#ef4444" />
             )}
           </TouchableOpacity>
         </View>
@@ -676,37 +680,37 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
 
       </ScrollView>
 
-      {/* Delete Confirmation Modal */}
+      {/* Inactivate Confirmation Modal */}
       <Modal
-        visible={showDeleteModal}
+        visible={showInactivateModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowDeleteModal(false)}
+        onRequestClose={() => setShowInactivateModal(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>{t('deleteConfirmTitle', 'common')}</Text>
+            <Text style={styles.modalTitle}>{t('inactivateConfirmTitle', 'common')}</Text>
             <Text style={styles.modalText}>
-              {t('deleteConfirmMessage', 'common')} "{product.product_name}"?
+              {t('inactivateConfirmMessage', 'common')} "{product.product_name}"?
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowDeleteModal(false)}
+                onPress={() => setShowInactivateModal(false)}
                 disabled={deleteLoading}
               >
                 <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmDeleteButton]}
-                onPress={handleDelete}
+                onPress={handleInactivate}
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.confirmDeleteText}>{t('delete', 'common')}</Text>
+                  <Text style={styles.confirmDeleteText}>{t('inactivate', 'common')}</Text>
                 )}
               </TouchableOpacity>
             </View>

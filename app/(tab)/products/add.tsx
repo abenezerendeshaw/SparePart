@@ -705,7 +705,7 @@ export default function AddProductScreen() {
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={[styles.statusOption, form.status === 'inactive' && styles.statusOptionInactive]}
+                    style={[styles.statusOption,   form.status === 'inactive' && styles.statusOptionInactive]}
                     onPress={() => handleInputChange('status', 'inactive')}
                   >
                     <MaterialCommunityIcons 
@@ -723,7 +723,7 @@ export default function AddProductScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              style={[styles.submitButton, styles.MBUTON, loading && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -980,7 +980,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 8,
   },
+
+  MBUTON:{
+    marginBottom: 80,
+  },
+
   statusOptionActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderColor: '#10b981',

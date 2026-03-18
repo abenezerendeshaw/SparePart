@@ -316,6 +316,46 @@ export const translations: Translations = {
     deleteConfirmMessage: {
       am: 'ይህን ምርት መሰረዝ እንደምትፈልግ እርግጠኛ ነህ?',
       en: 'Are you sure you want to delete this product?'
+    },
+    inactivate: {
+      am: 'አታሳይ',
+      en: 'Inactivate'
+    },
+    inactivating: {
+      am: 'እያገደ ነው...',
+      en: 'Inactivating...'
+    },
+    inactivateSuccess: {
+      am: 'ምርት በተሳካ ሁኔታ ታግዷል',
+      en: 'Product inactivated successfully'
+    },
+    inactivateFailed: {
+      am: 'ምርት ማገድ አልተሳካም',
+      en: 'Failed to inactivate product'
+    },
+    inactivateConfirmTitle: {
+      am: 'ምርት ይታገድ?',
+      en: 'Inactivate Product?'
+    },
+    inactivateConfirmMessage: {
+      am: 'ይህንን ምርት ማገድ እንደሚፈልጉ እርግጠኛ ነዎት?',
+      en: 'Are you sure you want to inactivate this product?'
+    },
+    inactiveProducts: {
+      am: 'የታገዱ ምርቶች',
+      en: 'Inactive Products'
+    },
+    deletePermanent: {
+      am: 'በትክክል ሰርዝ',
+      en: 'Permanent Delete'
+    },
+    permanentlyDeleteConfirmTitle: {
+      am: 'ለዘለቄታው ይሰረዝ?',
+      en: 'Permanently Delete?'
+    },
+    permanentlyDeleteConfirmMessage: {
+      am: 'ይህንን ምርት ለዘለቄታው መሰረዝ እንደሚፈልጉ እርግጠኛ ነዎት? ይህ ድርጊት ሊቀለበስ አይችልም እና የሚፈቀደው ምንም የሽያጭ ታሪክ ለሌላቸው ምርቶች ብቻ ነው።',
+      en: 'Are you sure you want to permanently delete this product? This action cannot be undone and is only allowed for products with no sales.'
     }
   },
   
@@ -348,6 +388,14 @@ export const translations: Translations = {
     profile: {
       am: 'መገለጫ',
       en: 'Profile'
+    },
+    inventory: {
+      am: 'ክምችት',
+      en: 'Inventory'
+    },
+    inactive: {
+      am: 'የታገዱ',
+      en: 'Inactive'
     },
   },
   
@@ -1321,6 +1369,10 @@ inventory: {
     am: 'ምድብ ይምረጡ',
     en: 'Select category'
   },
+  noInactiveProducts: {
+    am: 'ምንም የታገዱ ምርቶች የሉም',
+    en: 'No inactive products found'
+  },
   productsFound: {
     am: 'ምርቶች ተገኝተዋል',
     en: 'products found'
@@ -1348,6 +1400,18 @@ inventory: {
     notFound: {
       am: 'ምርት አልተገኘም',
       en: 'Product not found'
+    },
+    categoryBrand: {
+      am: 'ምድብ እና ብራንድ',
+      en: 'Category & Brand'
+    },
+    currentStock: {
+      am: 'የአሁኑ ክምችት',
+      en: 'Current Stock'
+    },
+    prices: {
+      am: 'ዋጋዎች',
+      en: 'Prices'
     }
   }
 };
