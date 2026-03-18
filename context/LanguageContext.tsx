@@ -78,6 +78,10 @@ export const translations: Translations = {
       am: 'ስህተት',
       en: 'Error'
     },
+    deleteFailed: {
+      am: 'መሰረዝ አልተሳካም',
+      en: 'Delete failed'
+    },
     confirm: {
       am: 'አረጋግጥ',
       en: 'Confirm'
@@ -94,10 +98,14 @@ export const translations: Translations = {
       am: 'ዳታ መጫን አልተቻለም',
       en: 'Failed to load data'
     },
+    status: {
+      am: 'ሁኔታ',
+      en: 'Status'
+    },
     filter: {
-    am: 'ማጣሪያ',
-    en: 'Filter'
-  },
+      am: 'ማጣሪያ',
+      en: 'Filter'
+    },
 
 
   password: {
@@ -243,10 +251,6 @@ export const translations: Translations = {
       am: 'ምርት በተሳካ ሁኔታ ተሰርዟል',
       en: 'Product deleted successfully'
     },
-    deleteFailed: {
-      am: 'ምርት መሰረዝ አልተሳካም',
-      en: 'Failed to delete product'
-    },
     backToProducts: {
       am: 'ወደ ምርቶች ተመለስ',
       en: 'Back to Products'
@@ -341,9 +345,33 @@ export const translations: Translations = {
       am: 'ይህንን ምርት ማገድ እንደሚፈልጉ እርግጠኛ ነዎት?',
       en: 'Are you sure you want to inactivate this product?'
     },
+    activate: {
+      am: 'አሳይ',
+      en: 'Activate'
+    },
+    activating: {
+      am: 'እያነቃ ነው...',
+      en: 'Activating...'
+    },
+    activateSuccess: {
+      am: 'ምርት በተሳካ ሁኔታ ነቅቷል',
+      en: 'Product activated successfully'
+    },
+    activateFailed: {
+      am: 'ምርት ማንቃት አልተሳካም',
+      en: 'Failed to activate product'
+    },
     inactiveProducts: {
       am: 'የታገዱ ምርቶች',
       en: 'Inactive Products'
+    },
+    statusActive: {
+      am: 'በስራ ላይ',
+      en: 'Active'
+    },
+    statusInactive: {
+      am: 'የታገዱ',
+      en: 'Inactive'
     },
     deletePermanent: {
       am: 'በትክክል ሰርዝ',
@@ -520,10 +548,6 @@ export const translations: Translations = {
     supplierIdPlaceholder: {
       am: 'SUP-001',
       en: 'SUP-001'
-    },
-    status: {
-      am: 'ሁኔታ',
-      en: 'Status'
     },
     active: {
       am: 'ንቁ',

@@ -271,7 +271,15 @@ export default function ProductsScreen() {
             <Text style={styles.stockValue}>
               {t('total', 'common')}: {t('currency', 'common')} {((item.total_stock || 0) * Number(item.selling_price)).toLocaleString()}
             </Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#2974ff" />
+            <View style={styles.cardActions}>
+              <TouchableOpacity 
+                style={styles.actionIconButton} 
+                onPress={() => confirmInactivate(item.id, item.product_name)}
+              >
+                <MaterialCommunityIcons name="archive-arrow-down-outline" size={22} color="#f59e0b" />
+              </TouchableOpacity>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#2974ff" />
+            </View>
           </View>
           
           {isDeleting && (
@@ -751,6 +759,16 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionIconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   stockValue: {
     color: '#2974ff',

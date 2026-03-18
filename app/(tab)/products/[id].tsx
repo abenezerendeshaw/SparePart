@@ -47,6 +47,7 @@ interface Product {
   created_at: string;
   updated_at: string;
   online_product_id: string;
+  status: string;
 }
 
 export default function ProductDetailScreen() {
@@ -57,7 +58,7 @@ export default function ProductDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
-  const [showInactivateModal, setShowInactivateModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingField, setEditingField] = useState<{field: string; value: string; label: string} | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -173,7 +174,11 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
     }
   };
 
-  const handleInactivate = async () => {
+  const handleToggleStatus = async () => {
+    if (!product) return;
+    const isCurrentlyActive = product.status?.toLowerCase() === 'active';
+    const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+    
     setDeleteLoading(true);
     
     try {
@@ -183,33 +188,35 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
         return;
       }
 
-      console.log('Attempting to inactivate product with ID:', id);
+      console.log(`Attempting to ${newStatus} product with ID:`, id);
       
-      const response = await api.put(`/products?id=${id}`, { status: 'inactive' });
-      console.log('Inactivate response:', response.data);
+      const response = await api.put(`/products?id=${id}`, { status: newStatus });
+      console.log(`${newStatus} response:`, response.data);
 
       if (response.data && response.data.status === 'success') {
+        const successMsg = isCurrentlyActive ? t('inactivateSuccess', 'common') : t('activateSuccess', 'common');
         Alert.alert(
           t('success'), 
-          t('inactivateSuccess', 'common'),
+          successMsg,
           [
             { 
               text: t('close', 'common'), 
-              onPress: () => router.back() 
+              onPress: () => fetchProductDetails() 
             },
             { 
-              text: t('inactiveProducts', 'common'), 
-              onPress: () => router.replace('/(tab)/inventory?status=inactive') 
+              text: t('allProducts', 'common'), 
+              onPress: () => router.replace('/(tab)/inventory') 
             }
           ]
         );
       } else {
-        throw new Error('Inactivate failed');
+        throw new Error(`${newStatus} failed`);
       }
     } catch (error: any) {
-      console.error('Error inactivating product:', error);
+      console.error(`Error ${newStatus}ing product:`, error);
       
-      let errorMessage = t('inactivateFailed', 'common');
+      const errorMsg = isCurrentlyActive ? t('inactivateFailed', 'common') : t('activateFailed', 'common');
+      let errorMessage = errorMsg;
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
@@ -219,7 +226,7 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
       Alert.alert(t('error'), errorMessage);
     } finally {
       setDeleteLoading(false);
-      setShowInactivateModal(false);
+      setShowStatusModal(false);
     }
   };
 
@@ -360,14 +367,21 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
             <MaterialCommunityIcons name="share" size={22} color="#10b981" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.headerButton, styles.deleteButton]}
-            onPress={() => setShowInactivateModal(true)}
+            style={[
+              styles.headerButton, 
+              product.status?.toLowerCase() === 'active' ? styles.deleteButton : styles.activateButtonDetail
+            ]}
+            onPress={() => setShowStatusModal(true)}
             disabled={deleteLoading}
           >
             {deleteLoading ? (
-              <ActivityIndicator size="small" color="#ef4444" />
+              <ActivityIndicator size="small" color={product.status?.toLowerCase() === 'active' ? "#ef4444" : "#10b981"} />
             ) : (
-              <MaterialCommunityIcons name="archive-arrow-down" size={22} color="#ef4444" />
+              <MaterialCommunityIcons 
+                name={product.status?.toLowerCase() === 'active' ? "archive-arrow-down" : "restore"} 
+                size={22} 
+                color={product.status?.toLowerCase() === 'active' ? "#ef4444" : "#10b981"} 
+              />
             )}
           </TouchableOpacity>
         </View>
@@ -397,6 +411,23 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
             />
             <Text style={[styles.statusText, { color: stockStatus.color }]}>
               {stockStatus.text}
+            </Text>
+          </View>
+
+          <View style={[
+            styles.statusBadge, 
+            { 
+              backgroundColor: product.status?.toLowerCase() === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+              borderColor: product.status?.toLowerCase() === 'active' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+              borderWidth: 1,
+              marginLeft: 8 
+            }
+          ]}>
+            <Text style={[
+              styles.statusText, 
+              { color: product.status?.toLowerCase() === 'active' ? '#10b981' : '#f59e0b' }
+            ]}>
+              {product.status?.toLowerCase() === 'active' ? t('statusActive', 'common') : t('statusInactive', 'common')}
             </Text>
           </View>
         </View>
@@ -449,6 +480,8 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />
         }
@@ -678,39 +711,75 @@ ${product.description ? `\n📝 ${t('description', 'addProduct')}:\n${product.de
           <Text style={styles.timestamp}>{t('updated', 'common')}: {formatDate(product.updated_at)}</Text>
         </View>
 
+        {/* Dynamic Action Button for Active/Inactive Products */}
+        <TouchableOpacity
+          style={product.status?.toLowerCase() === 'active' ? styles.bigArchiveButton : styles.bigRestoreButton}
+          onPress={() => setShowStatusModal(true)}
+        >
+          <LinearGradient
+            colors={product.status?.toLowerCase() === 'active' ? ['#ef4444', '#dc2626'] : ['#10b981', '#059669']}
+            style={styles.bigActionGradient}
+          >
+            <MaterialCommunityIcons 
+              name={product.status?.toLowerCase() === 'active' ? "archive-arrow-down-outline" : "restore"} 
+              size={24} 
+              color="#ffffff" 
+            />
+            <Text style={styles.bigActionText}>
+              {product.status?.toLowerCase() === 'active' ? t('inactivate', 'common') : t('activate', 'common')} {product.product_name}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
       </ScrollView>
 
-      {/* Inactivate Confirmation Modal */}
+      {/* Status Toggle Confirmation Modal */}
       <Modal
-        visible={showInactivateModal}
+        visible={showStatusModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowInactivateModal(false)}
+        onRequestClose={() => setShowStatusModal(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <MaterialCommunityIcons name="alert" size={48} color="#ef4444" />
-            <Text style={styles.modalTitle}>{t('inactivateConfirmTitle', 'common')}</Text>
+          <View style={[
+            styles.modalContent,
+            product.status?.toLowerCase() !== 'active' && { borderColor: '#10b981' }
+          ]}>
+            <MaterialCommunityIcons 
+              name={product.status?.toLowerCase() === 'active' ? "alert" : "information-outline"} 
+              size={48} 
+              color={product.status?.toLowerCase() === 'active' ? "#ef4444" : "#10b981"} 
+            />
+            <Text style={styles.modalTitle}>
+              {product.status?.toLowerCase() === 'active' ? t('inactivateConfirmTitle', 'common') : t('activateConfirmTitle', 'common')}
+            </Text>
             <Text style={styles.modalText}>
-              {t('inactivateConfirmMessage', 'common')} "{product.product_name}"?
+              {product.status?.toLowerCase() === 'active' 
+                ? t('inactivateConfirmMessage', 'common')
+                : t('activateConfirmMessage', 'common')} "{product.product_name}"?
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowInactivateModal(false)}
+                onPress={() => setShowStatusModal(false)}
                 disabled={deleteLoading}
               >
                 <Text style={styles.cancelButtonText}>{t('cancel', 'common')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmDeleteButton]}
-                onPress={handleInactivate}
+                style={[
+                  styles.modalButton, 
+                  product.status?.toLowerCase() === 'active' ? styles.confirmDeleteButton : styles.saveButton
+                ]}
+                onPress={handleToggleStatus}
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.confirmDeleteText}>{t('inactivate', 'common')}</Text>
+                  <Text style={styles.confirmDeleteText}>
+                    {product.status?.toLowerCase() === 'active' ? t('inactivate', 'common') : t('activate', 'common')}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -830,6 +899,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
+  activateButtonDetail: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
   backButton: {
     backgroundColor: '#10b981',
     paddingHorizontal: 24,
@@ -893,6 +965,42 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  bigRestoreButton: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  bigArchiveButton: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  bigActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  bigActionText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   tabContainer: {
     flexDirection: 'row',

@@ -39,8 +39,8 @@ export default function InventoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const params = useLocalSearchParams();
-  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive'>((params.status as 'active' | 'inactive') || 'active');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
 
   // Animation values
@@ -97,19 +97,14 @@ export default function InventoryScreen() {
         return;
       }
 
-      console.log(`Fetching inventory with status: ${selectedStatus}`);
-      const response = await api.get(`/products?limit=100&status=${selectedStatus}`);
+      console.log(`Fetching all products for unified inventory`);
+      const response = await api.get(`/products?limit=200`);
       const productsData = response.data?.data?.products || [];
       
-      // Filter based on selected status
-      const filteredData = productsData.filter((p: any) => 
-        p.status?.toLowerCase() === selectedStatus.toLowerCase()
-      );
-
-      setProducts(filteredData);
+      setProducts(productsData);
       
       // Extract unique categories from products
-      const uniqueCategories = ['all', ...new Set(filteredData.map((p: Product) => p.category).filter(Boolean))] as string[];
+      const uniqueCategories = ['all', ...new Set(productsData.map((p: Product) => p.category).filter(Boolean))] as string[];
       setCategories(uniqueCategories);
 
     } catch (error) {
@@ -124,39 +119,47 @@ export default function InventoryScreen() {
   // Re-fetch when selectedStatus changes
   useEffect(() => {
     fetchInventory();
-  }, [selectedStatus]);
+  }, []);
 
-  // Handle status param from outside
-  useEffect(() => {
-    if (params.status && (params.status === 'active' || params.status === 'inactive')) {
-      setSelectedStatus(params.status as 'active' | 'inactive');
-    }
-  }, [params.status]);
 
-  const handlePermanentDelete = async (productId: number) => {
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchInventory();
+  };
+
+  const handleToggleStatus = async (id: number, currentStatus: string) => {
+    const isCurrentlyActive = currentStatus?.toLowerCase() === 'active';
+    const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+    
     Alert.alert(
-      t('permanentlyDeleteConfirmTitle', 'common'),
-      t('permanentlyDeleteConfirmMessage', 'common'),
+      isCurrentlyActive ? t('inactivateConfirmTitle', 'common') : t('activateConfirmTitle', 'common'),
+      `${isCurrentlyActive ? t('inactivateConfirmMessage', 'common') : t('activateConfirmMessage', 'common')}`,
       [
         { text: t('cancel', 'common'), style: 'cancel' },
         { 
-          text: t('deletePermanent', 'common'), 
-          style: 'destructive',
+          text: isCurrentlyActive ? t('inactivate', 'common') : t('activate', 'common'), 
+          style: isCurrentlyActive ? 'destructive' : 'default',
           onPress: async () => {
             try {
               setLoading(true);
-              const response = await api.delete(`/products?id=${productId}`);
+              const response = await api.put(`/products?id=${id}`, { status: newStatus });
               
-              if (response.data?.status === 'success') {
-                Alert.alert(t('success'), t('deleteSuccess', 'common'));
+              if (response.data && response.data.status === 'success') {
+                Alert.alert(
+                  t('success'), 
+                  isCurrentlyActive ? t('inactivateSuccess', 'common') : t('activateSuccess', 'common')
+                );
                 fetchInventory();
               } else {
-                throw new Error(response.data?.message || 'Delete failed');
+                throw new Error('Status update failed');
               }
             } catch (error: any) {
-              console.error('Permanent delete failed:', error);
-              const message = error.response?.data?.message || error.message || t('deleteFailed', 'common');
-              Alert.alert(t('error'), message);
+              console.error('Error toggling status:', error);
+              Alert.alert(
+                t('error'), 
+                isCurrentlyActive ? t('inactivateFailed', 'common') : t('activateFailed', 'common')
+              );
             } finally {
               setLoading(false);
             }
@@ -166,20 +169,17 @@ export default function InventoryScreen() {
     );
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchInventory();
-  };
-
   // Filter products based on search and category
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = searchQuery === '' || 
-      product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.product_code.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredProducts = products.filter(item => {
+    const matchesSearch = 
+      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.product_code.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     
-    return matchesSearch && matchesCategory;
+    const matchesStatus = selectedStatus === 'all' || item.status?.toLowerCase() === selectedStatus;
+    
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   // Calculate inventory stats
@@ -208,6 +208,7 @@ export default function InventoryScreen() {
       }
     };
 
+
     return (
       <TouchableOpacity 
         style={styles.inventoryCard}
@@ -218,10 +219,44 @@ export default function InventoryScreen() {
             <Text style={styles.productName}>{item.product_name}</Text>
             <Text style={styles.productCode}>{item.product_code}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor()}20` }]}>
-            <Text style={[styles.statusText, { color: getStatusColor() }]}>
-              {getStatusText()}
+          <View style={[
+            styles.cardStatusBadge,
+            item.status?.toLowerCase() === 'active' ? styles.cardStatusActive : styles.cardStatusInactive
+          ]}>
+            <MaterialCommunityIcons 
+              name={item.status?.toLowerCase() === 'active' ? "check-circle-outline" : "archive-outline"} 
+              size={12} 
+              color={item.status?.toLowerCase() === 'active' ? "#10b981" : "#f59e0b"} 
+            />
+            <Text style={[
+              styles.cardStatusText,
+              { color: item.status?.toLowerCase() === 'active' ? "#10b981" : "#f59e0b" }
+            ]}>
+              {item.status?.toLowerCase() === 'active' ? t('statusActive', 'common') : t('statusInactive', 'common')}
             </Text>
+          </View>
+        </View>
+        
+        <View style={styles.cardBody}>
+          <View style={styles.activityContainer}>
+            <View style={styles.activityHeader}>
+              <Text style={styles.activityLabel}>{t('status', 'common')}</Text>
+              <Text style={[
+                styles.activityStatus,
+                { color: item.status?.toLowerCase() === 'active' ? '#10b981' : '#f59e0b' }
+              ]}>
+                {item.status?.toLowerCase() === 'active' ? t('statusActive', 'common') : t('statusInactive', 'common')}
+              </Text>
+            </View>
+            <View style={styles.activityBar}>
+              <View style={[
+                styles.activityFill,
+                { 
+                  width: item.status?.toLowerCase() === 'active' ? '100%' : '15%',
+                  backgroundColor: item.status?.toLowerCase() === 'active' ? '#10b981' : '#f59e0b' 
+                }
+              ]} />
+            </View>
           </View>
         </View>
 
@@ -262,14 +297,22 @@ export default function InventoryScreen() {
             {t('totalValue', 'inventory')}: {t('currency', 'common')} {(stockLevel * Number(item.selling_price)).toLocaleString()}
           </Text>
           <View style={styles.cardActions}>
-            {selectedStatus === 'inactive' && (
-              <TouchableOpacity 
-                style={styles.deleteIconButton} 
-                onPress={() => handlePermanentDelete(item.id)}
-              >
-                <MaterialCommunityIcons name="delete-forever" size={22} color="#ef4444" />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={styles.actionIconButtonContainer} 
+              onPress={() => handleToggleStatus(item.id, item.status)}
+            >
+              <MaterialCommunityIcons 
+                name={item.status?.toLowerCase() === 'active' ? "archive-arrow-down-outline" : "restore"} 
+                size={22} 
+                color={item.status?.toLowerCase() === 'active' ? "#f59e0b" : "#10b981"} 
+              />
+              <Text style={[
+                styles.actionIconLabel,
+                { color: item.status?.toLowerCase() === 'active' ? "#f59e0b" : "#10b981" }
+              ]}>
+                {item.status?.toLowerCase() === 'active' ? t('inactivate', 'common') : t('activate', 'common')}
+              </Text>
+            </TouchableOpacity>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#64748b" />
           </View>
         </View>
@@ -301,7 +344,7 @@ export default function InventoryScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {selectedStatus === 'active' ? t('inventoryManagement', 'inventory') : t('inactiveProducts', 'common')}
+          {t('inventoryManagement', 'inventory')}
         </Text>
         <TouchableOpacity
           style={styles.filterButton}
@@ -310,10 +353,6 @@ export default function InventoryScreen() {
               t('filter', 'common'),
               t('selectCategory', 'inventory'),
               ([
-                { 
-                  text: selectedStatus === 'active' ? `📂 ${t('inactiveProducts', 'common')}` : `✅ ${t('active', 'addProduct')}`, 
-                  onPress: () => setSelectedStatus(selectedStatus === 'active' ? 'inactive' : 'active') 
-                },
                 ...categories.map(cat => ({
                   text: cat === 'all' ? t('all', 'common') : cat,
                   onPress: () => setSelectedCategory(cat),
@@ -324,9 +363,9 @@ export default function InventoryScreen() {
           }}
         >
           <MaterialCommunityIcons 
-            name={selectedStatus === 'active' ? "filter-variant" : "archive-eye-outline"} 
+            name="filter-variant" 
             size={24} 
-            color={selectedStatus === 'active' ? "#10b981" : "#f59e0b"} 
+            color="#10b981" 
           />
         </TouchableOpacity>
       </Animated.View>
@@ -345,6 +384,7 @@ export default function InventoryScreen() {
         }
         contentContainerStyle={styles.scrollContent}
       >
+
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
@@ -399,6 +439,45 @@ export default function InventoryScreen() {
           </LinearGradient>
         </View>
 
+        {/* Status Filter Chips */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.statusFilterContainer}
+          contentContainerStyle={{ paddingRight: 20 }}
+        >
+          {['all', 'active', 'inactive'].map((status) => (
+            <TouchableOpacity
+              key={status}
+              style={[
+                styles.categoryChip,
+                selectedStatus === status && styles.selectedCategoryChip,
+                selectedStatus === status && status === 'active' && { backgroundColor: '#10b981', borderColor: '#10b981' },
+                selectedStatus === status && status === 'inactive' && { backgroundColor: '#f59e0b', borderColor: '#f59e0b' }
+              ]}
+              onPress={() => setSelectedStatus(status)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {status !== 'all' && (
+                  <View style={[
+                    styles.statusDot,
+                    { backgroundColor: status === 'active' ? '#10b981' : '#f59e0b' },
+                    selectedStatus === status && { backgroundColor: '#ffffff' }
+                  ]} />
+                )}
+                <Text style={[
+                  styles.categoryChipText,
+                  selectedStatus === status && styles.selectedCategoryChipText
+                ]}>
+                  {status === 'all' ? t('all', 'common') : 
+                   status === 'active' ? t('statusActive', 'common') : 
+                   t('statusInactive', 'common')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {/* Category Filter Chips */}
         <ScrollView 
           horizontal 
@@ -426,19 +505,30 @@ export default function InventoryScreen() {
 
         {/* Inventory List */}
         <View style={styles.inventoryList}>
-          <Text style={styles.listTitle}>
-            {filteredProducts.length} {t('productsFound', 'inventory')}
-          </Text>
+          <View style={styles.listHeader}>
+            <Text style={styles.listTitle}>
+              {filteredProducts.length} {t('productsFound', 'inventory')}
+            </Text>
+            <View style={styles.statusIndicator}>
+              <View style={[
+                styles.statusDot,
+                { backgroundColor: '#10b981' }
+              ]} />
+              <Text style={styles.statusIndicatorText}>
+                {t('allProducts', 'common')}
+              </Text>
+            </View>
+          </View>
 
           {filteredProducts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons 
-                name={selectedStatus === 'active' ? "package-variant" : "archive-off-outline"} 
+                name="package-variant" 
                 size={48} 
                 color="#475569" 
               />
               <Text style={styles.emptyText}>
-                {selectedStatus === 'active' ? t('noProducts', 'common') : t('noInactiveProducts', 'inventory')}
+                {t('noProducts', 'common')}
               </Text>
             </View>
           ) : (
@@ -476,6 +566,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  statusTabBarSticky: {
+    display: 'none',
+  },
+  activityContainer: {
+    marginBottom: 8,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  activityLabel: {
+    color: '#94a3b8',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  activityStatus: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  activityBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  activityFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   loadingText: {
     color: '#94a3b8',
@@ -564,6 +687,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
   },
+  statusFilterContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
   categoryContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
@@ -591,10 +718,42 @@ const styles = StyleSheet.create({
   inventoryList: {
     paddingHorizontal: 20,
   },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   listTitle: {
     color: '#94a3b8',
     fontSize: 14,
-    marginBottom: 12,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statusIndicatorActive: {
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  statusIndicatorInactive: {
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  statusIndicatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a3b8',
   },
   inventoryCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -607,8 +766,31 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  cardStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  cardStatusActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  cardStatusInactive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  cardStatusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textTransform: 'uppercase',
   },
   productInfo: {
     flex: 1,
@@ -622,6 +804,9 @@ const styles = StyleSheet.create({
   productCode: {
     color: '#94a3b8',
     fontSize: 12,
+  },
+  cardBody: {
+    marginBottom: 12,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -671,16 +856,22 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 14,
     fontWeight: '600',
+    flex: 1,
   },
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 16,
   },
-  deleteIconButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  actionIconButtonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  actionIconLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   emptyContainer: {
     alignItems: 'center',
