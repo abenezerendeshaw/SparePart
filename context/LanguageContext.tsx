@@ -42,6 +42,13 @@ export const translations: Translations = {
     am: 'ያልተጠበቀ ስህተት ተከስቷል',
     en: 'An unexpected error occurred'
   },
+
+  app: {
+    am: 'ስፔሲፊክ ኢትዮጵያ መተግበሪያ',
+    en: 'Specific Ethiopia Application'
+  },
+
+
   website: {
     am: 'ድረ-ገጽ',
     en: 'Website'

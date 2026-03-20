@@ -549,6 +549,16 @@ export default function ProfileScreen() {
             color="#8b5cf6"
             onPress={() => Linking.openURL('https://specificethiopia.com/inventory/')}
           />
+
+
+          <MenuItem
+            icon="web"
+            title={t('app', 'common')}
+            color="#8b5cf6"
+            onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=com.abenu.Mobile_latest&pcampaignid=web_share')}
+          />
+
+
         </View>
 
         {/* Logout Button */}
