@@ -440,7 +440,7 @@ export default function Dashboard() {
           </View>
           <View style={styles.userDetails}>
             
-            <Text style={styles.userRole}>{userRole || t('trader', 'common')}</Text>
+           
             <Text style={styles.userFullName}>{userFullName}</Text>
             <Animated.Text style={[styles.date, { opacity: headerOpacity }]}>
               {formatDate(currentTime)}
@@ -766,18 +766,7 @@ export default function Dashboard() {
           <Text style={styles.supportText}>{t('support', 'common')}</Text>
         </TouchableOpacity>
 
-        {/* Demo Notification Trigger (Temporary) */}
-        <TouchableOpacity 
-          style={[styles.supportButton, { marginTop: 12, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }]} 
-          onPress={() => schedulePushNotification(
-            'Order Status',
-            'The purchase you ordered has arrived! 📦',
-            { type: 'order_arrival' }
-          )}
-        >
-          <MaterialCommunityIcons name="truck-delivery" size={20} color="#10b981" />
-          <Text style={[styles.supportText, { color: '#10b981' }]}>Simulate Order Arrival</Text>
-        </TouchableOpacity>
+
         
         {/* Extra bottom padding for better scrolling */}
         <View style={{ height: 100 }} />

@@ -113,7 +113,7 @@ export default function AddSaleScreen() {
 
   // Auto-advance to next section when current section is "completed"
   useEffect(() => {
-    if (expandedSections.items && items.length > 0) {
+    if (expandedSections.items && items.length > 10) {
       // After adding items, automatically expand customer section
       toggleSection('customer');
     }
