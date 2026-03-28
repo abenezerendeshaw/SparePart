@@ -212,6 +212,42 @@ export default function SalesScreen() {
     return matchesSearch && matchesDate && matchesPayment;
   });
 
+    // Profit/tax/donation/zakat/net profit summary for filtered sales
+    const filteredProfits = React.useMemo(() => {
+      let totalProfit = 0;
+      let totalTax = 0;
+      let totalProfitAfterTax = 0;
+      filteredSales.forEach(sale => {
+        const profit = Number(sale.profit) || 0;
+        const taxEnabled = Number(sale.tax) > 0;
+        const taxAmount = taxEnabled ? profit * 0.15 : 0;
+        const profitAfterTax = profit - taxAmount;
+        totalProfit += profit;
+        totalTax += taxAmount;
+        totalProfitAfterTax += profitAfterTax;
+      });
+      // Donations:
+      const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
+      const zakat = totalProfit * 0.025; // Zakat (2.5%)
+      return {
+        totalProfit,
+        totalTax,
+        totalProfitAfterTax,
+        donation: churchDonation,
+        zakat,
+        netProfit: totalProfit - totalTax - churchDonation - zakat,
+      };
+    }, [filteredSales]);
+
+    // Calculate asrat donation (10% of total profit) and update on every sale change
+    const asratDonation = React.useMemo(() => {
+      let totalProfit = 0;
+      filteredSales.forEach(sale => {
+        totalProfit += Number(sale.profit) || 0;
+      });
+      return totalProfit * 0.10;
+    }, [filteredSales]);
+
   const getPaymentMethodIcon = (method: string) => {
     switch (method?.toLowerCase()) {
       case 'cash': return 'cash';
@@ -306,7 +342,7 @@ export default function SalesScreen() {
             {Number(item.due_amount) > 0 && (
               <View style={styles.detailItem}>
                 <MaterialCommunityIcons name="alert" size={14} color="#ef4444" />
-                <Text style={[styles.detailText, { color: '#ef4444' }]}>
+                <Text style={[styles.detailText, { color: '#ef4444' }]}> 
                   {t('due', 'common')}: {t('currency', 'common')} {Number(item.due_amount).toLocaleString()}
                 </Text>
               </View>
@@ -384,6 +420,9 @@ export default function SalesScreen() {
         </TouchableOpacity>
       </Animated.View>
 
+      {/* Stats Cards (include Profit After Tax, Net Profit, Donation) */}
+
+
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
@@ -437,21 +476,38 @@ export default function SalesScreen() {
             <Text style={styles.statSubValue}>{t('currency', 'common')} {stats.totalRevenue.toLocaleString()}</Text>
           </LinearGradient>
 
-          <LinearGradient
-            colors={['#8b5cf6', '#6d28d9']}
-            style={styles.statCard}
-          >
-            <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
-          </LinearGradient>
+            <LinearGradient
+              colors={['#8b5cf6', '#6d28d9']}
+              style={styles.statCard}
+            >
+              <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
+            </LinearGradient>
 
-          <LinearGradient
-            colors={['#2974ff', '#1a4c9e']}
-            style={styles.statCard}
-          >
-            <Text style={styles.statValue}>{t('currency', 'common')} {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
-            <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
-          </LinearGradient>
+            <LinearGradient
+              colors={['#2974ff', '#1a4c9e']}
+              style={styles.statCard}
+            >
+              <Text style={styles.statValue}>{t('currency', 'common')} {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
+              <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
+            </LinearGradient>
+
+
+            <LinearGradient
+              colors={['#514b4b', '#1796a18e']}
+              style={styles.statCard}
+            >
+              <Text style={styles.statValue}>{filteredProfits.donation.toFixed(2)} {t('currency', 'common')}</Text>
+              <Text style={styles.statLabel}>{t('churchDonation', 'sales') || 'Donation (10%)'}</Text>
+            </LinearGradient>
+
+            <LinearGradient
+              colors={['#352a22ab', '#6ad787d3']}
+              style={styles.statCard}
+            >
+              <Text style={styles.statValue}>{filteredProfits.zakat.toFixed(2)} {t('currency', 'common')}</Text>
+              <Text style={styles.statLabel}>{t('zakat', 'sales') || 'Zakat (2.5%)'}</Text>
+            </LinearGradient>
         </View>
 
         {/* Payment Stats */}
@@ -677,6 +733,11 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: (width - 40) / 2,
+    padding: 16,
+    borderRadius: 12,
+  },
+    statCards: {
+    width: width - 32,
     padding: 16,
     borderRadius: 12,
   },

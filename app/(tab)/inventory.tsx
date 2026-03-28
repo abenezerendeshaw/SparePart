@@ -143,7 +143,13 @@ export default function InventoryScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              const response = await api.put(`/products?id=${id}`, { status: newStatus });
+              // When deactivating, set stock to 0
+              const updateData = { status: newStatus };
+              if (isCurrentlyActive) {
+                updateData.total_stock = 0;
+              }
+              
+              const response = await api.put(`/products?id=${id}`, updateData);
               
               if (response.data && response.data.status === 'success') {
                 Alert.alert(
@@ -182,11 +188,12 @@ export default function InventoryScreen() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Calculate inventory stats
-  const totalStock = products.reduce((sum, p) => sum + (p.total_stock || 0), 0);
-  const lowStockItems = products.filter(p => (p.total_stock || 0) <= 10);
-  const outOfStockItems = products.filter(p => (p.total_stock || 0) === 0);
-  const totalValue = products.reduce((sum, p) => sum + ((p.total_stock || 0) * Number(p.selling_price)), 0);
+  // Calculate inventory stats (only active products)
+  const activeProducts = products.filter(p => p.status?.toLowerCase() === 'active');
+  const totalStock = activeProducts.reduce((sum, p) => sum + (p.total_stock || 0), 0);
+  const lowStockItems = activeProducts.filter(p => (p.total_stock || 0) <= 10);
+  const outOfStockItems = activeProducts.filter(p => (p.total_stock || 0) === 0);
+  const totalValue = activeProducts.reduce((sum, p) => sum + ((p.total_stock || 0) * Number(p.selling_price)), 0);
 
   const InventoryCard = ({ item }: { item: Product }) => {
     const stockLevel = item.total_stock || 0;
@@ -260,37 +267,37 @@ export default function InventoryScreen() {
           </View>
         </View>
 
-        <View style={styles.stockInfo}>
-          <View style={styles.stockBar}>
-            <View style={[styles.stockFill, { 
-              width: `${Math.min((stockLevel / 50) * 100, 100)}%`,
-              backgroundColor: getStatusColor() 
-            }]} />
+        {/* Only show stock info for active products */}
+        {item.status?.toLowerCase() === 'active' && (
+          <View style={styles.stockInfo}>
+            <View style={styles.stockBar}>
+              <View style={[styles.stockFill, { 
+                width: `${Math.min((stockLevel / 50) * 100, 100)}%`,
+                backgroundColor: getStatusColor() 
+              }]} />
+            </View>
+            <View style={styles.stockDetails}>
+              <View style={styles.stockDetailItem}>
+                <MaterialCommunityIcons name="package-variant" size={16} color="#94a3b8" />
+                <Text style={styles.stockDetailText}>
+                  {stockLevel} {item.unit || 'pcs'}
+                </Text>
+              </View>
+              <View style={styles.stockDetailItem}>
+                <MaterialCommunityIcons name="currency-usd" size={16} color="#94a3b8" />
+                <Text style={styles.stockDetailText}>
+                  {t('currency', 'common')} {Number(item.selling_price).toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.stockDetailItem}>
+                <MaterialCommunityIcons name="tag" size={16} color="#94a3b8" />
+                <Text style={styles.stockDetailText}>
+                  {item.category || t('other', 'common')}
+                </Text>
+              </View>
+            </View>
           </View>
-          
-          <View style={styles.stockDetails}>
-            <View style={styles.stockDetailItem}>
-              <MaterialCommunityIcons name="package-variant" size={16} color="#94a3b8" />
-              <Text style={styles.stockDetailText}>
-                {stockLevel} {item.unit || 'pcs'}
-              </Text>
-            </View>
-            
-            <View style={styles.stockDetailItem}>
-              <MaterialCommunityIcons name="currency-usd" size={16} color="#94a3b8" />
-              <Text style={styles.stockDetailText}>
-                {t('currency', 'common')} {Number(item.selling_price).toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={styles.stockDetailItem}>
-              <MaterialCommunityIcons name="tag" size={16} color="#94a3b8" />
-              <Text style={styles.stockDetailText}>
-                {item.category || t('other', 'common')}
-              </Text>
-            </View>
-          </View>
-        </View>
+        )}
 
         <View style={styles.cardFooter}>
           <Text style={styles.stockValue}>

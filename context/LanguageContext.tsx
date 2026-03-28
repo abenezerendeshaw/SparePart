@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -393,6 +394,8 @@ export const translations: Translations = {
       en: 'Are you sure you want to permanently delete this product? This action cannot be undone and is only allowed for products with no sales.'
     }
   },
+
+
   
   // Navigation
   navigation: {
@@ -1171,6 +1174,48 @@ noIdProvided: {
   noData: {
     am: 'ምንም ውሂብ የለም',
     en: 'No data'
+  },
+  governmentTax: {
+    am: 'የመንግስት ግብር',
+    en: 'Government Tax'
+  },
+  taxAmount: {
+    am: 'የግብር መጠን',
+    en: 'Tax Amount'
+  },
+  on: {
+    am: 'በርቷል',
+    en: 'On'
+  },
+  off: {
+    am: 'ጠፍቷል',
+    en: 'Off'
+  },
+  churchDonation: {
+    am: 'አስራት በኩራት  - ክርስቲያን ከሆንክ ይህንን ገቢህ የተጣራው ላይ 10% ለቤተ ክርስቲያን በመስጠት የበረከት ተካፋይ መሆን ይችላሉ።',
+    en: 'Tithe with pride: one-tenth of your profit for the church. if your a chirstian you can dedicate this 10% for the church as a tithe or offering.'
+  },
+  donationAmount: {
+    am: 'የልገሳ መጠን',
+    en: 'Donation Amount'
+  },
+  profitAfterTax: {
+    am: 'በቫት በኋላ ትርፍ',
+    en: 'Profit After VAT'
+  },
+  netProfit: {
+    am: 'የመጨረሻ ትርፍ',
+    en: 'Net Profit'
+  },
+  phoneEmailMinLength: {
+    am: 'ስልክ ወይም ኢሜይል ቢያንስ 10 ቁምፊ ይሁን',
+    en: 'Phone or Email must be at least 10 characters.'
+  },
+
+
+  zakat: {
+    am: 'ዘካ - በኢስላም ሃይማኖታዊ ግዴታ  ከባለጸጋዎች ተወስዶ ለድሆች እና ለተቸገሩ የሚሰጥ የገንዘብ አስተዳደር ነው። 2.5% ለዘካ መስጠት ይችላሉ።',
+    en: 'if you are a Muslim you can dedicate this 2.5% for Zakat, which is a form of almsgiving treated in Islam as a religious obligation or tax.'
   },
 
 },

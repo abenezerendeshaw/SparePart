@@ -608,7 +608,7 @@ export default function AddSaleScreen() {
                       <Text style={styles.summaryLabel}>{t('subtotal', 'sales')}:</Text>
                       <Text style={styles.summaryValue}>{totalAmount.toFixed(2)} {t('currency', 'common')}</Text>
                     </View>
-                    
+
                     <View style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>{t('discount', 'sales')}:</Text>
                       <TextInput
@@ -619,6 +619,24 @@ export default function AddSaleScreen() {
                         placeholder="0"
                         placeholderTextColor="#64748b"
                       />
+                    </View>
+
+                    {/* Tax Toggle */}
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>{t('governmentTax', 'sales')} (15%):</Text>
+                      <TouchableOpacity
+                        style={[styles.taxToggle, form.tax_enabled && styles.taxToggleActive]}
+                        onPress={() => handleInputChange('tax_enabled', !form.tax_enabled)}
+                      >
+                        <MaterialCommunityIcons 
+                          name={form.tax_enabled ? 'toggle-switch' : 'toggle-switch-off'} 
+                          size={24} 
+                          color={form.tax_enabled ? '#10b981' : '#64748b'} 
+                        />
+                        <Text style={[styles.taxToggleText, form.tax_enabled && styles.taxToggleTextActive]}>
+                          {form.tax_enabled ? t('on', 'common') : t('off', 'common')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
 
                     <View style={[styles.summaryRow, styles.totalRow]}>
