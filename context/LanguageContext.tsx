@@ -1192,7 +1192,7 @@ noIdProvided: {
     en: 'Off'
   },
   churchDonation: {
-    am: 'አስራት በኩራት  - ክርስቲያን ከሆንክ ይህንን ገቢህ የተጣራው ላይ 10% ለቤተ ክርስቲያን በመስጠት የበረከት ተካፋይ መሆን ይችላሉ።',
+    am: 'አስራት በኩራት  - ክርስቲያን ከሆንክ ከተጣራ ገቢህ ላይ 10% ለቤተ ክርስቲያን አስራት በመስጠት የበረከት ተካፋይ መሆን ይችላሉ።',
     en: 'Tithe with pride: one-tenth of your profit for the church. if your a chirstian you can dedicate this 10% for the church as a tithe or offering.'
   },
   donationAmount: {

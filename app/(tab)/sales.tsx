@@ -1,4 +1,4 @@
-import { StatusBar,View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
+import { StatusBar, View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -62,6 +62,8 @@ export default function SalesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week' | 'month' | 'paid' | 'due'>('all');
   const [selectedPayment, setSelectedPayment] = useState<'all' | 'cash' | 'card' | 'transfer' | 'bank_transfer'>('all');
+  const [donationExpanded, setDonationExpanded] = useState(false);
+  const [zekatExpanded, setZekatExpanded] = useState(false);
   const [stats, setStats] = useState<SalesStats>({
     totalSales: 0,
     todaySales: 0,
@@ -212,41 +214,32 @@ export default function SalesScreen() {
     return matchesSearch && matchesDate && matchesPayment;
   });
 
-    // Profit/tax/donation/zakat/net profit summary for filtered sales
-    const filteredProfits = React.useMemo(() => {
-      let totalProfit = 0;
-      let totalTax = 0;
-      let totalProfitAfterTax = 0;
-      filteredSales.forEach(sale => {
-        const profit = Number(sale.profit) || 0;
-        const taxEnabled = Number(sale.tax) > 0;
-        const taxAmount = taxEnabled ? profit * 0.15 : 0;
-        const profitAfterTax = profit - taxAmount;
-        totalProfit += profit;
-        totalTax += taxAmount;
-        totalProfitAfterTax += profitAfterTax;
-      });
-      // Donations:
-      const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
-      const zakat = totalProfit * 0.025; // Zakat (2.5%)
-      return {
-        totalProfit,
-        totalTax,
-        totalProfitAfterTax,
-        donation: churchDonation,
-        zakat,
-        netProfit: totalProfit - totalTax - churchDonation - zakat,
-      };
-    }, [filteredSales]);
-
-    // Calculate asrat donation (10% of total profit) and update on every sale change
-    const asratDonation = React.useMemo(() => {
-      let totalProfit = 0;
-      filteredSales.forEach(sale => {
-        totalProfit += Number(sale.profit) || 0;
-      });
-      return totalProfit * 0.10;
-    }, [filteredSales]);
+  // Profit/tax/donation/zakat/net profit summary for filtered sales
+  const filteredProfits = React.useMemo(() => {
+    let totalProfit = 0;
+    let totalTax = 0;
+    let totalProfitAfterTax = 0;
+    filteredSales.forEach(sale => {
+      const profit = Number(sale.profit) || 0;
+      const taxEnabled = Number(sale.tax) > 0;
+      const taxAmount = taxEnabled ? profit * 0.15 : 0;
+      const profitAfterTax = profit - taxAmount;
+      totalProfit += profit;
+      totalTax += taxAmount;
+      totalProfitAfterTax += profitAfterTax;
+    });
+    // Donations:
+    const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
+    const zakat = totalProfit * 0.025; // Zakat (2.5%)
+    return {
+      totalProfit,
+      totalTax,
+      totalProfitAfterTax,
+      donation: churchDonation,
+      zakat,
+      netProfit: totalProfit - totalTax - churchDonation - zakat,
+    };
+  }, [filteredSales]);
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method?.toLowerCase()) {
@@ -388,6 +381,28 @@ export default function SalesScreen() {
     </TouchableOpacity>
   );
 
+  // Helper component for expandable stat card
+  const ExpandableStatCard = ({ gradientColors, amount, label, expanded, setExpanded, description }) => (
+    <LinearGradient colors={gradientColors} style={styles.statCard}>
+      <Text style={styles.statValue}>{amount} {t('currency', 'common')}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.expandableRow}>
+        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.expandButton}>
+          <MaterialCommunityIcons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color="rgba(255,255,255,0.8)"
+          />
+        </TouchableOpacity>
+      </View>
+      {expanded && (
+        <Text style={styles.descriptionText}>
+          {description}
+        </Text>
+      )}
+    </LinearGradient>
+  );
+
   if (loading) {
     return (
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
@@ -419,9 +434,6 @@ export default function SalesScreen() {
           <MaterialCommunityIcons name="plus" size={24} color="#f59e0b" />
         </TouchableOpacity>
       </Animated.View>
-
-      {/* Stats Cards (include Profit After Tax, Net Profit, Donation) */}
-
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
@@ -456,7 +468,7 @@ export default function SalesScreen() {
           </View>
         </View>
 
-        {/* Stats Cards */}
+        {/* Stats Cards (including expandable donation & zakat) */}
         <View style={styles.statsGrid}>
           <LinearGradient
             colors={['#f59e0b', '#d97706']}
@@ -476,38 +488,41 @@ export default function SalesScreen() {
             <Text style={styles.statSubValue}>{t('currency', 'common')} {stats.totalRevenue.toLocaleString()}</Text>
           </LinearGradient>
 
-            <LinearGradient
-              colors={['#8b5cf6', '#6d28d9']}
-              style={styles.statCard}
-            >
-              <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
-            </LinearGradient>
+          <LinearGradient
+            colors={['#8b5cf6', '#6d28d9']}
+            style={styles.statCard}
+          >
+            <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
+          </LinearGradient>
 
-            <LinearGradient
-              colors={['#2974ff', '#1a4c9e']}
-              style={styles.statCard}
-            >
-              <Text style={styles.statValue}>{t('currency', 'common')} {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
-              <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
-            </LinearGradient>
+          <LinearGradient
+            colors={['#2974ff', '#1a4c9e']}
+            style={styles.statCard}
+          >
+            <Text style={styles.statValue}>{t('currency', 'common')} {Math.round(stats.averageSaleValue).toLocaleString()}</Text>
+            <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
+          </LinearGradient>
 
+          {/* Asrat Bekurat (Church Donation) - Expandable */}
+          <ExpandableStatCard
+            gradientColors={['#514b4b', '#1796a18e']}
+            amount={filteredProfits.donation.toFixed(2)}
+            label={t('አስራት በኩራት', 'sales') || 'Donation (10%)'}
+            expanded={donationExpanded}
+            setExpanded={setDonationExpanded}
+            description={t('churchDonation', 'sales')}
+          />
 
-            <LinearGradient
-              colors={['#514b4b', '#1796a18e']}
-              style={styles.statCard}
-            >
-              <Text style={styles.statValue}>{filteredProfits.donation.toFixed(2)} {t('currency', 'common')}</Text>
-              <Text style={styles.statLabel}>{t('churchDonation', 'sales') || 'Donation (10%)'}</Text>
-            </LinearGradient>
-
-            <LinearGradient
-              colors={['#352a22ab', '#6ad787d3']}
-              style={styles.statCard}
-            >
-              <Text style={styles.statValue}>{filteredProfits.zakat.toFixed(2)} {t('currency', 'common')}</Text>
-              <Text style={styles.statLabel}>{t('zakat', 'sales') || 'Zakat (2.5%)'}</Text>
-            </LinearGradient>
+          {/* Zakat - Expandable */}
+          <ExpandableStatCard
+            gradientColors={['#352a22ab', '#6ad787d3']}
+            amount={filteredProfits.zakat.toFixed(2)}
+            label={t('ዘካ', 'sales') || 'Zakat (2.5%)'}
+            expanded={zekatExpanded}
+            setExpanded={setZekatExpanded}
+            description={t('zakat', 'sales') || '2.5% of total profit for charity (Zakat).'}
+          />
         </View>
 
         {/* Payment Stats */}
@@ -733,11 +748,6 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: (width - 40) / 2,
-    padding: 16,
-    borderRadius: 12,
-  },
-    statCards: {
-    width: width - 32,
     padding: 16,
     borderRadius: 12,
   },
@@ -1008,5 +1018,19 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  expandableRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  expandButton: {
+    padding: 4,
+  },
+  descriptionText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    marginTop: 8,
+    lineHeight: 16,
   },
 });

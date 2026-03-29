@@ -1,10 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  Dimensions,
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -12,16 +16,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  ActivityIndicator,
-  Modal,
-  FlatList,
-  Animated,
-  Dimensions,
+  View
 } from 'react-native';
+import { useLanguage } from '../../../context/LanguageContext';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
-import { useLanguage } from '../../../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -60,7 +59,7 @@ export default function AddSaleScreen() {
     payment: false,
   });
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<any>({
     customer_name: t('walkInCustomer', 'sales'),
     customer_phone: '',
     customer_email: '',
@@ -69,6 +68,9 @@ export default function AddSaleScreen() {
     notes: '',
     paid_amount: '',
     owner_id: '',
+    tax_enabled: false,
+    church_donation_enabled: false,
+    zekat_enabled: false,
   });
 
   const [items, setItems] = useState<SaleItem[]>([]);
@@ -78,7 +80,10 @@ export default function AddSaleScreen() {
   // Calculations
   const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
   const discount = Number(form.discount) || 0;
-  const grandTotal = Math.max(0, totalAmount - discount);
+  const taxAmount = form.tax_enabled ? totalAmount * 0.15 : 0;
+  const donationAmount = form.church_donation_enabled ? totalAmount * 0.10 : 0;
+  const zekatAmount = form.zekat_enabled ? totalAmount * 0.025 : 0;
+  const grandTotal = Math.max(0, totalAmount - discount + taxAmount + donationAmount + zekatAmount);
   const paidAmount = Number(form.paid_amount) || 0;
   const dueAmount = Math.max(0, grandTotal - paidAmount);
   
@@ -111,6 +116,24 @@ export default function AddSaleScreen() {
     }, 100);
   };
 
+
+
+  // Add this right after your useState declarations
+const isCustomerInfoValid = () => {
+  const nameChanged = form.customer_name !== t('walkInCustomer', 'sales');
+  const phoneValid = !form.customer_phone || form.customer_phone.length >= 10;
+  const emailValid = !form.customer_email || form.customer_email.length >= 10;
+
+  // Auto-advance if name is changed, OR phone/email meet length requirement
+  return (nameChanged || form.customer_phone.length >= 10 || form.customer_email.length >= 10)
+         && phoneValid
+         && emailValid;
+};
+
+
+
+
+
   // Auto-advance to next section when current section is "completed"
   useEffect(() => {
     if (expandedSections.items && items.length > 10) {
@@ -119,13 +142,13 @@ export default function AddSaleScreen() {
     }
   }, [items.length]);
 
-  useEffect(() => {
-    if (expandedSections.customer && 
-        (form.customer_name !== t('walkInCustomer', 'sales') || form.customer_phone)) {
-      // After customer info is entered, automatically expand payment section
-      toggleSection('payment');
-    }
-  }, [form.customer_name, form.customer_phone]);
+useEffect(() => {
+  if (expandedSections.customer && isCustomerInfoValid()) {
+    toggleSection('payment');
+  }
+}, [form.customer_name, form.customer_phone, form.customer_email, expandedSections.customer]);
+
+  
 
   // Load products when modal opens
   const loadProducts = async () => {
@@ -142,7 +165,7 @@ export default function AddSaleScreen() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setForm({ ...form, [field]: value });
   };
 
@@ -255,6 +278,8 @@ export default function AddSaleScreen() {
         notes: form.notes,
         paid_amount: Number(form.paid_amount) || grandTotal,
         owner_id: user?.owner_id || Number(form.owner_id) || undefined,
+        tax_enabled: !!form.tax_enabled,
+        tax_amount: Number((form.tax_enabled ? (items.reduce((s, i) => s + i.total_price, 0) * 0.15) : 0).toFixed(2)),
         items: items.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,
@@ -627,11 +652,12 @@ export default function AddSaleScreen() {
                       <TouchableOpacity
                         style={[styles.taxToggle, form.tax_enabled && styles.taxToggleActive]}
                         onPress={() => handleInputChange('tax_enabled', !form.tax_enabled)}
+                        hitSlop={{ top: 10, left: 10, right: 10, bottom: 10 }}
                       >
-                        <MaterialCommunityIcons 
-                          name={form.tax_enabled ? 'toggle-switch' : 'toggle-switch-off'} 
-                          size={24} 
-                          color={form.tax_enabled ? '#10b981' : '#64748b'} 
+                        <MaterialCommunityIcons
+                          name={form.tax_enabled ? 'toggle-switch' : 'toggle-switch-off'}
+                          size={32}
+                          color={form.tax_enabled ? '#10b981' : '#94a3b8'}
                         />
                         <Text style={[styles.taxToggleText, form.tax_enabled && styles.taxToggleTextActive]}>
                           {form.tax_enabled ? t('on', 'common') : t('off', 'common')}
@@ -1249,6 +1275,35 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  taxToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  taxToggleActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  taxToggleText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  taxToggleTextActive: {
+    color: '#0f5132',
+    fontWeight: '800',
   },
   dueRow: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
