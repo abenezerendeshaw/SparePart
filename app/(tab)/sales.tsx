@@ -253,9 +253,9 @@ export default function SalesScreen() {
       totalTax += taxAmount;
       totalProfitAfterTax += profitAfterTax;
     });
-    // Donations (kept for display):
-    const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
-    const zakat = totalProfit * 0.025; // Zakat (2.5%)
+    // // Donations (kept for display):
+    // const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
+    // const zakat = totalProfit * 0.025; // Zakat (2.5%)
 
     // Calculate filtered expenses for the same date range/filter as filteredSales
     const filteredExpenses = expenses.filter(exp => {
@@ -284,6 +284,10 @@ export default function SalesScreen() {
 
     // Net after expenses should be raw totalProfit minus filtered expenses (no other deductions)
     const netAfterExpenses = totalFilteredExpenses > 0 ? (totalProfit - totalFilteredExpenses) : totalProfit;
+
+    // Donations calculated from net profit after expenses
+    const churchDonation = netAfterExpenses * 0.10; // Asrat / church donation (10%)
+    const zakat = netAfterExpenses * 0.025; // Zakat (2.5%)
 
     return {
       totalProfit,
@@ -814,8 +818,8 @@ export default function SalesScreen() {
                 <View style={styles.donationCard}>
                   <Text style={styles.donationTitle}>Church Donation Calculation</Text>
                   <View style={styles.calculationRow}>
-                    <Text style={styles.calculationLabel}>Total Profit</Text>
-                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.totalProfit.toLocaleString()}</Text>
+                    <Text style={styles.calculationLabel}>Net Profit (After Expenses)</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
                   </View>
                   <View style={styles.calculationRow}>
                     <Text style={styles.calculationLabel}>× 10% Rate</Text>
@@ -833,7 +837,7 @@ export default function SalesScreen() {
                     {t('churchDonation', 'sales') || 'አስራት በኩራት (Asrat Bekurat) is the traditional Ethiopian Orthodox Church donation, calculated as 10% of total profit. This sacred practice supports the church and community welfare.'}
                   </Text>
                   <Text style={styles.infoText}>
-                    The donation amount is calculated from the raw profit before any expenses or other deductions.
+                    The donation amount is calculated from the net profit after expenses and other deductions.
                   </Text>
                 </View>
               </View>
@@ -863,8 +867,8 @@ export default function SalesScreen() {
                 <View style={styles.zakatCard}>
                   <Text style={styles.zakatTitle}>Zakat Calculation</Text>
                   <View style={styles.calculationRow}>
-                    <Text style={styles.calculationLabel}>Total Profit</Text>
-                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.totalProfit.toLocaleString()}</Text>
+                    <Text style={styles.calculationLabel}>Net Profit (After Expenses)</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
                   </View>
                   <View style={styles.calculationRow}>
                     <Text style={styles.calculationLabel}>× 2.5% Rate</Text>
@@ -882,7 +886,7 @@ export default function SalesScreen() {
                     {t('zakat', 'sales') || 'Zakat is one of the Five Pillars of Islam, a mandatory form of almsgiving calculated as 2.5% of total wealth held for a full lunar year. It purifies wealth and helps the community.'}
                   </Text>
                   <Text style={styles.infoText}>
-                    In this context, Zakat is calculated on the total profit amount and is intended for charitable purposes and community welfare.
+                    In this context, Zakat is calculated on the net profit after expenses and is intended for charitable purposes and community welfare.
                   </Text>
                 </View>
               </View>
