@@ -745,14 +745,14 @@ export default function Dashboard() {
 
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => router.push('/(tab)/sales')}
+              onPress={() => router.push('/subscription-packages')}
             >
               <LinearGradient
                 colors={['#f59e0b', '#d97706']}
                 style={styles.actionGradient}
               >
-                <MaterialCommunityIcons name="history" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>{t('salesHistory', 'common')}</Text>
+                <MaterialCommunityIcons name="crown" size={24} color="#ffffff" />
+                <Text style={styles.actionText}>{t('availablePlans', 'subscription')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -760,11 +760,7 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Contact Support Button */}
-        <TouchableOpacity style={styles.supportButton} onPress={() => router.push('/(tab)/expenses')}>
-          <MaterialCommunityIcons name="wallet" size={20} color="#2974ff" />
-          <Text style={styles.actionText}>{t('expenses', 'navigation')}</Text>
-        </TouchableOpacity>
+
 
 
         

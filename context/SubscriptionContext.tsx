@@ -23,6 +23,8 @@ interface SubscriptionDetails {
   trial_ends_at: string | null;
   subscription_expires_at: string | null;
   message: string;
+  username?: string;
+  email?: string;
 }
 
 interface SubscriptionContextType {
@@ -85,10 +87,16 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         try {
           const plansRes = await api.get('/subscription?action=plans');
           if (plansRes.data.status === 'success' && plansRes.data.data?.plans && Array.isArray(plansRes.data.data.plans)) {
+            // Fallback prices
+            const fallbackPrices: Record<string, string> = {
+              'monthly': '200',
+              'quarterly': '400',
+              'yearly': '850'
+            };
             // Ensure each plan has features array and price is string
             const processedPlans = plansRes.data.data.plans.map((plan: any) => ({
               ...plan,
-              price: String(plan.price || '0'),
+              price: plan.price ? String(plan.price) : fallbackPrices[plan.id] || '0',
               features: Array.isArray(plan.features) ? plan.features : [
                 'Full access to Inventory Management',
                 'Sales & Purchase tracking',
@@ -106,9 +114,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             console.warn('API did not return plans, using fallback data');
             setPlans([
               {
-                id: '1',
-                name: 'Essential',
-                duration: 'Monthly',
+                id: 'monthly',
+                name: 'Monthly',
+                duration: '30 days',
                 price: '200',
                 period: 'Monthly',
                 popular: false,
@@ -126,9 +134,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 ]
               },
               {
-                id: '2',
-                name: 'Professional',
-                duration: 'Quarterly',
+                id: 'quarterly',
+                name: 'Quarterly',
+                duration: '90 days',
                 price: '400',
                 period: 'Quarterly',
                 popular: true,
@@ -146,9 +154,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 ]
               },
               {
-                id: '3',
-                name: 'Ultimate',
-                duration: 'Yearly',
+                id: 'yearly',
+                name: 'Yearly',
+                duration: '365 days',
                 price: '850',
                 period: 'Yearly',
                 popular: false,
@@ -174,9 +182,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Use fallback plans on error
           setPlans([
             {
-              id: '1',
-              name: 'Essential',
-              duration: 'Monthly',
+              id: 'monthly',
+              name: 'Monthly',
+              duration: '30 days',
               price: '200',
               period: 'Monthly',
               popular: false,
@@ -194,9 +202,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
               ]
             },
             {
-              id: '2',
-              name: 'Professional',
-              duration: 'Quarterly',
+              id: 'quarterly',
+              name: 'Quarterly',
+              duration: '90 days',
               price: '400',
               period: 'Quarterly',
               popular: true,
@@ -214,9 +222,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
               ]
             },
             {
-              id: '3',
-              name: 'Ultimate',
-              duration: 'Yearly',
+              id: 'yearly',
+              name: 'Yearly',
+              duration: '365 days',
               price: '850',
               period: 'Yearly',
               popular: false,

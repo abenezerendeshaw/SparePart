@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -15,14 +15,64 @@ import {
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import api from './lib/api'; // adjust path to your api.ts
 
 const { width, height } = Dimensions.get('window');
 
 export default function SubscriptionPackagesScreen() {
   const router = useRouter();
   const subscriptionContext = useSubscription();
-  const { plans = [], telegramLink, details, loading: isLoading } = subscriptionContext || {};
   const { t } = useLanguage();
+
+  // Local state for plans, Telegram link, user details, and loading/error
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [telegramLink, setTelegramLink] = useState<string>('');
+  const [details, setDetails] = useState<any>({});
+
+  // Fetch subscription data directly from API
+  const fetchSubscriptionData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // 1. Fetch subscription plans
+      const plansResponse = await api.get('/subscription', { params: { action: 'plans' } });
+      const plansData = plansResponse.data.data; // { plans: [], telegram_link: '', ... }
+      setPlans(plansData.plans || []);
+      setTelegramLink(plansData.telegram_link || subscriptionContext?.telegramLink || 'https://t.me/xesser');
+
+      // 2. Fetch user subscription status & details
+      const userResponse = await api.get('/subscription', { params: { action: 'check' } });
+      const userData = userResponse.data.data; // { is_locked, subscription_status, plan, trial_ends_at, expires_at, message }
+
+      // Combine with context data for username/email (if not returned by API)
+      setDetails({
+        subscription_status: userData.subscription_status,
+        plan: userData.plan,
+        trial_ends_at: userData.trial_ends_at,
+        subscription_expires_at: userData.expires_at,
+        username: subscriptionContext?.details?.username || 'user',
+        email: subscriptionContext?.details?.email || '',
+      });
+    } catch (err: any) {
+      console.error('Error fetching subscription data:', err);
+      setError(err.message || t('unexpectedError'));
+
+      // Fallback to context data if available
+      if (subscriptionContext) {
+        setPlans(subscriptionContext.plans || []);
+        setTelegramLink(subscriptionContext.telegramLink || 'https://t.me/xesser');
+        setDetails(subscriptionContext.details || {});
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptionData();
+  }, []);
 
   // Build Telegram deep link with pre‑filled message
   const buildTelegramPaymentLink = (
@@ -45,10 +95,9 @@ export default function SubscriptionPackagesScreen() {
 
   const handlePackageSelect = (plan: any) => {
     const period = plan.period || plan.duration || 'Monthly';
-    const priceValue = plan.price ? String(plan.price).trim() : '0';
-    const amount = priceValue && !isNaN(Number(priceValue)) ? Number(priceValue) : 0;
+    const amount = parseFloat(plan.price) || 0; // convert string price to number
     const url = buildTelegramPaymentLink(
-      telegramLink || 'xesser',
+      telegramLink,
       details?.username || 'user',
       `${plan.name} (${period})`,
       amount,
@@ -57,12 +106,38 @@ export default function SubscriptionPackagesScreen() {
     Linking.openURL(url);
   };
 
-  // Loading state – show spinner while data is being fetched
-  if (!subscriptionContext || isLoading || !Array.isArray(plans) || plans.length === 0) {
+  // Loading state
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#10b981" />
-        <Text style={styles.loadingText}>Loading subscription plans...</Text>
+        <Text style={styles.loadingText}>{t('loadingPlans', 'subscription')}</Text>
+      </View>
+    );
+  }
+
+  // Error state with retry
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <MaterialCommunityIcons name="alert-circle" size={48} color="#f43f5e" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchSubscriptionData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // No plans available
+  if (!plans || plans.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <MaterialCommunityIcons name="package-variant" size={48} color="#6b7280" />
+        <Text style={styles.emptyText}>{t('noPlans', 'subscription')}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchSubscriptionData}>
+          <Text style={styles.retryButtonText}>{t('refresh', 'subscription')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -72,12 +147,11 @@ export default function SubscriptionPackagesScreen() {
 
     const period = plan.period || plan.duration || 'Monthly';
     const isFeatured = plan.popular === true || plan.badge === 'MOST POPULAR';
-    const priceValue = plan.price ? String(plan.price).trim() : '0';
-    const price = priceValue && !isNaN(Number(priceValue)) ? Number(priceValue) : 0;
+    const price = parseFloat(plan.price) || 0;
 
     return (
       <View style={[styles.pricingCard, isFeatured && styles.featuredCard]}>
-        {/* Badge and saving */}
+        {/* Badge */}
         <View style={styles.badgeContainer}>
           {plan.badge && (
             <View style={[styles.badge, isFeatured && styles.featuredBadge]}>
@@ -92,29 +166,31 @@ export default function SubscriptionPackagesScreen() {
           )}
         </View>
 
-        {/* Plan title and price */}
+        {/* Plan header */}
         <View style={styles.planHeader}>
           <Text style={styles.planName}>{plan.name}</Text>
-          <Text style={styles.planPeriod}>{period} subscription</Text>
+          <Text style={styles.planPeriod}>{period} {t('subscription', 'subscription')}</Text>
           <View style={styles.priceContainer}>
             <Text style={styles.priceAmount}>{price}</Text>
             <Text style={styles.priceCurrency}>ETB</Text>
             <Text style={styles.pricePeriod}>/ {period.toLowerCase()}</Text>
           </View>
-          <Text style={styles.priceNote}>{plan.duration_text || 'billed accordingly'}</Text>
+          <Text style={styles.priceNote}>{plan.duration_text || t('billedAccordingly', 'subscription')}</Text>
         </View>
 
-        {/* Features list */}
-        <View style={styles.featuresList}>
-          {Array.isArray(plan.features) && plan.features.map((feature: string, idx: number) => (
-            <View key={idx} style={styles.featureItem}>
-              <MaterialCommunityIcons name="check-circle" size={16} color="#10b981" />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
-        </View>
+        {/* Features */}
+        {Array.isArray(plan.features) && plan.features.length > 0 && (
+          <View style={styles.featuresList}>
+            {plan.features.map((feature: string, idx: number) => (
+              <View key={idx} style={styles.featureItem}>
+                <MaterialCommunityIcons name="check-circle" size={16} color="#10b981" />
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-        {/* CTA Button */}
+        {/* CTA */}
         <TouchableOpacity
           style={[styles.ctaButton, isFeatured && styles.featuredButton]}
           onPress={() => handlePackageSelect({ ...plan, period, price })}
@@ -128,14 +204,14 @@ export default function SubscriptionPackagesScreen() {
           >
             <MaterialCommunityIcons name="send" size={18} color={isFeatured ? '#fff' : '#10b981'} />
             <Text style={[styles.ctaButtonText, isFeatured && styles.featuredButtonText]}>
-              Pay {price} ETB & Send Receipt
+              {t('payAndSendReceipt', 'subscription')}
             </Text>
             <MaterialCommunityIcons name="arrow-right" size={14} color={isFeatured ? '#fff' : '#10b981'} />
           </LinearGradient>
         </TouchableOpacity>
 
         <Text style={styles.buttonNote}>
-          Click → Telegram opens with pre‑filled message. Attach screenshot after payment.
+          {t('telegramMessageNote', 'subscription')}
         </Text>
       </View>
     );
@@ -145,28 +221,19 @@ export default function SubscriptionPackagesScreen() {
   const isTrialExpired = details?.subscription_status === 'expired' && details?.trial_ends_at;
   const isSubExpired = details?.subscription_status === 'expired' && details?.subscription_expires_at;
 
-  // Get all prices for display
-  const allPrices = Array.isArray(plans) 
-    ? plans.map(p => {
-        const priceValue = p.price ? String(p.price).trim() : '0';
-        return priceValue && !isNaN(Number(priceValue)) ? Number(priceValue) : 0;
-      }).join(' / ')
-    : '200 / 400 / 850';
+  const allPrices = plans.map(p => parseFloat(p.price) || 0).join(' / ');
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0c15" />
 
-      {/* Animated Background Orbs */}
+      {/* Orbs */}
       <View style={styles.orb1} />
       <View style={styles.orb2} />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.glassPanel}>
-          {/* Header Section */}
+          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <MaterialCommunityIcons
@@ -176,103 +243,87 @@ export default function SubscriptionPackagesScreen() {
               />
             </View>
             <Text style={styles.title}>
-              {isLockedMode ? 'Access Restricted' : 'Upgrade Your Enterprise'}
+              {isLockedMode ? t('accessRestricted', 'subscription') : t('upgradeEnterprise', 'subscription')}
             </Text>
             <Text style={styles.subtitle}>
               {isTrialExpired
-                ? 'Your free trial has ended. Unlock powerful inventory features with a subscription.'
+                ? t('trialEnded', 'subscription')
                 : isSubExpired
-                ? 'Your previous subscription expired. Renew now to continue seamless management.'
+                ? t('subscriptionExpired', 'subscription')
                 : details?.subscription_status === 'locked'
-                ? 'Account is currently locked. Choose a plan below to regain full access.'
-                : 'Your account is active, but you can upgrade early to secure your business growth and unlock premium tools.'}
+                ? t('accountLocked', 'subscription')
+                : t('accountActive', 'subscription')}
             </Text>
-            <View style={styles.userInfo}>
-              <MaterialCommunityIcons name="account-circle" size={16} color="#10b981" />
-              <Text style={styles.userInfoText}>Logged as: </Text>
-              <Text style={styles.usernameText}>@{details?.username || 'user'}</Text>
-              <Text style={styles.userInfoText}> • </Text>
-              <Text style={styles.userInfoText}>{details?.email}</Text>
-            </View>
+            
           </View>
 
-          {/* Pricing Cards Grid */}
+          {/* Pricing Cards */}
           <View style={styles.pricingGrid}>
             {plans.map((plan, index) => (
-              <PackageCard key={plan.id} plan={plan} index={index} />
+              <PackageCard key={plan.id || index} plan={plan} index={index} />
             ))}
           </View>
 
-          {/* Payment Instructions */}
+          {/* Instructions */}
           <View style={styles.instructionsSection}>
             <View style={styles.instructionsHeader}>
               <View style={styles.telegramIcon}>
-                <MaterialCommunityIcons name="send" size={28} color="#10b981" />
+                <MaterialCommunityIcons name="information" size={28} color="#10b981" />
               </View>
               <View style={styles.instructionsContent}>
                 <Text style={styles.instructionsTitle}>
-                  How to complete payment & get activated
+                  {t('paymentActivation', 'subscription')}
                 </Text>
                 <View style={styles.stepsGrid}>
                   <View style={styles.step}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>1</Text>
-                    </View>
+                    <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
                     <Text style={styles.stepText}>
-                      Choose your plan ({allPrices} ETB) and click "Pay & Send Receipt".
+                      {t('choosePlan', 'subscription').replace('{prices}', allPrices)}
                     </Text>
                   </View>
                   <View style={styles.step}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>2</Text>
-                    </View>
+                    <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
                     <Text style={styles.stepText}>
-                      Make payment via Telebirr or bank transfer (details provided by admin in Telegram).
+                      {t('makePayment', 'subscription')}
                     </Text>
                   </View>
                   <View style={styles.step}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>3</Text>
-                    </View>
+                    <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
                     <Text style={styles.stepText}>
-                      Send payment screenshot + your username @{details?.username || 'user'} to @{telegramLink?.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser'}. Account activated within minutes.
+                      {t('sendReceipt', 'subscription')
+                        .replace('{username}', details?.username || 'user')
+                        .replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
                     </Text>
                   </View>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.contactButton}
-                onPress={() => Linking.openURL(telegramLink || 'https://t.me/xesser')}
-              >
+              <TouchableOpacity style={styles.contactButton} onPress={() => Linking.openURL(telegramLink)}>
                 <MaterialCommunityIcons name="send" size={16} color="#fff" />
                 <Text style={styles.contactButtonText}>
-                  Contact @{telegramLink?.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser'}
+                  {t('contactTelegram', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
                 </Text>
                 <MaterialCommunityIcons name="open-in-new" size={12} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Receipt Reminder */}
+          {/* Reminder */}
           <View style={styles.reminderSection}>
             <View style={styles.reminderContent}>
               <MaterialCommunityIcons name="cellphone" size={32} color="#6366f1" />
               <View style={styles.reminderText}>
                 <Text style={styles.reminderTitle}>
-                  After payment, don't forget to attach receipt and include your Telegram username or the exact username @{details?.username || 'user'} in the message.
+                  {t('paymentReminder', 'subscription').replace('{username}', details?.username || 'user')}
                 </Text>
                 <Text style={styles.reminderSubtitle}>
-                  Manual verification is fast. Our support team will upgrade your subscription instantly once receipt is confirmed.
+                  {t('manualVerification', 'subscription')}
                 </Text>
               </View>
             </View>
             <View style={styles.reminderActions}>
-              <TouchableOpacity
-                style={styles.telegramButton}
-                onPress={() => Linking.openURL(telegramLink || 'https://t.me/xesser')}
-              >
+              <TouchableOpacity style={styles.telegramButton} onPress={() => Linking.openURL(telegramLink)}>
                 <MaterialCommunityIcons name="send" size={14} color="#fff" />
-                <Text style={styles.telegramButtonText}>Open Telegram Chat</Text>
+                <Text style={styles.telegramButtonText}>{t('openTelegramChat', 'subscription')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -280,10 +331,10 @@ export default function SubscriptionPackagesScreen() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              © {new Date().getFullYear()} Specific Ethiopia — Inventory Management System. All rights reserved.
+              {t('footerText', 'subscription').replace('{year}', new Date().getFullYear().toString())}
             </Text>
             <Text style={styles.footerSubtext}>
-              Need help? Direct message on Telegram: @{telegramLink?.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser'}
+              {t('needHelp', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
             </Text>
           </View>
         </View>
@@ -293,6 +344,7 @@ export default function SubscriptionPackagesScreen() {
 }
 
 const styles = StyleSheet.create({
+ 
   container: {
     flex: 1,
     backgroundColor: '#0a0c15',
@@ -307,6 +359,47 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginTop: 12,
     fontSize: 16,
+    fontFamily: 'System',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0a0c15',
+    padding: 20,
+  },
+  errorText: {
+    color: '#f43f5e',
+    marginTop: 16,
+    marginBottom: 20,
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: 'System',
+  },
+  retryButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontFamily: 'System',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0a0c15',
+    padding: 20,
+  },
+  emptyText: {
+    color: '#9ca3af',
+    marginTop: 16,
+    marginBottom: 20,
+    fontSize: 16,
+    textAlign: 'center',
     fontFamily: 'System',
   },
   orb1: {

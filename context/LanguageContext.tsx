@@ -1570,7 +1570,7 @@ inventory: {
       en: 'Active'
     },
     expired: {
-      am: 'ጊዜው ያለፈበት',
+      am: 'ጊዜው አልቋል',
       en: 'Expired'
     },
     trial: {
@@ -1604,6 +1604,122 @@ inventory: {
     priceOnRequest: {
       am: 'አስተዳዳሪን ይጠይቁ',
       en: 'Contact Admin for Price'
+    },
+    loadingPlans: {
+      am: 'የደንበኝነት ፕላኖች በመጫን ላይ...',
+      en: 'Loading subscription plans...'
+    },
+    noPlans: {
+      am: 'የደንበኝነት ፕላኖች አልተገኙም።',
+      en: 'No subscription plans available.'
+    },
+    refresh: {
+      am: 'አድስ',
+      en: 'Refresh'
+    },
+    subscription: {
+      am: 'የደንበኝነት',
+      en: 'subscription'
+    },
+    billedAccordingly: {
+      am: 'በተለመደው መልክ ይለጠራል',
+      en: 'billed accordingly'
+    },
+    payAndSendReceipt: {
+      am: 'ክፍያ አድርገው የክፍያ ደረሰኝ ላክ',
+      en: 'Pay & Send Receipt'
+    },
+    telegramMessageNote: {
+      am: 'ክሊክ አድርገው → ተሌግራም በቅድሚያ የተሞላ መልክ ይከፈታል። ክፍያ ከሰራ በኋላ ደረሰኝ ያያይዙ።',
+      en: 'Click → Telegram opens with pre‑filled message. Attach screenshot after payment.'
+    },
+    accessRestricted: {
+      am: 'መለያ ተገድቧል',
+      en: 'Access Restricted'
+    },
+    upgradeEnterprise: {
+      am: 'ኢንተርፕራይዝዎን ያሳድጉ',
+      en: 'Upgrade Your Enterprise'
+    },
+    trialEnded: {
+      am: 'የተለመደው የሙከራ ጊዜ አልቋል። በደንበኝነት አስተያየት የክምችት ባህሪያትን ይክፈቱ።',
+      en: 'Your free trial has ended. Unlock powerful inventory features with a subscription.'
+    },
+    subscriptionExpired: {
+      am: 'ያለፈው የደንበኝነት ጊዜ አልቋል። አሁን ያድሱ እና ሳይጨነቁ መጠቀሞን ይቀጥሉ።',
+      en: 'Your previous subscription expired. Renew now to continue seamless management.'
+    },
+    accountLocked: {
+      am: 'መለያ በአሁኑ ጊዜ ተገድቧል። ሙሉ መለያ ለማግኘት ከታች ፕላን ይምረጡ።',
+      en: 'Account is currently locked. Choose a plan below to regain full access.'
+    },
+    accountActive: {
+      am: 'መለያዎ ንቁ ነው፣ ግን ቀድሞ ለማሳደግ እና የፕሪሚየም መሳሪያዎችን ለመክፈት ቀድሞ ለማሳደግ ይችላሉ።',
+      en: 'Your account is active, but you can upgrade early to secure your business growth and unlock premium tools.'
+    },
+    paymentActivation: {
+      am: 'ክፍያ እና ማግበሪያ እንዴት እንደሚሰራ',
+      en: 'How to complete payment & get activated'
+    },
+    choosePlan: {
+      am: 'ፕላንዎን ይምረጡ ({prices} ብር) እና "ክፍያ አድርገው የክፍያ ደረሰኙን በቴሌግራም ይላኩ" የሚለውን ክሊክ አድርጉ።',
+      en: 'Choose your plan ({prices} ETB) and click "Pay & Send Receipt".'
+    },
+    makePayment: {
+      am: 'በተሌብር ወይም ባንክ ማስተላለፍ ክፍያ ይክፈሉ (በተሌግራም ደረሰኙን ያያይዙ)።',
+      en: 'Make payment via Telebirr or bank transfer (details provided by admin in Telegram).'
+    },
+    sendReceipt: {
+      am: 'የክፍያ ደረሰኝ + የተሌግራም ስምዎ @{username} ወደ @{telegram} ወይም የተመዘገቡበትን Email ይላኩ። ይህ የርሶን አካውንት ለማስቀጠል ይጠቅማል።',
+      en: 'Send payment screenshot + your username @{username} to @{telegram} or Email Account. Account activated within minutes.'
+    },
+    contactTelegram: {
+      am: '@{telegram} ን ያነጋግሩ',
+      en: 'Contact @{telegram}'
+    },
+    paymentReminder: {
+      am: 'ከ ክፍያ  በኋላ፣ የክፍያ ደረሰኝ ለማሳየት እና  የተሌግራም ስምዎ ወይም ትክክለኛ ስም @{username} ወይም ኢሜል አድራሻ በ ቴሌግራም ይላኩ።',
+      en: 'After payment, don\'t forget to attach receipt and include your Telegram username or the exact username @{username} in the message.'
+    },
+    manualVerification: {
+      am: 'በ ማንዋል ማረጋገጫ ፈጣን ነው። የክፍያ ደረሰኝ ከተረጋገጠ በኋላ የድጋፍ ቡድናችን የደንበኝነትዎን አገልግሎት በፍጥነት ያሳድጋሉ።',
+      en: 'Manual verification is fast. Our support team will upgrade your subscription instantly once receipt is confirmed.'
+    },
+    featureLocked: {
+      am: 'ባህሪ ተገድቧል',
+      en: 'Feature Locked'
+    },
+    featureLockedMessage: {
+      am: 'የ {feature} ባህሪን መጠቀም ለመቀጠል የደንበኝነት ምዝገባዎን ያሳድጉ።',
+      en: 'Upgrade your subscription to continue using the {feature} feature.'
+    },
+    upgradeOptions: {
+      am: 'የማሳደግ አማራጮች',
+      en: 'Upgrade Options'
+    },
+    upgradeNow: {
+      am: 'አሁን ያሳድጉ',
+      en: 'Upgrade Now'
+    },
+    contactForPayment: {
+      am: 'ክፍያ ለማድረግ ያነጋግሩ',
+      en: 'Contact for Payment'
+    },
+    openTelegramChat: {
+      am: 'የተሌግራም ውይይት ክፈት',
+      en: 'Open Telegram Chat'
+    },
+    openTelegramChat: {
+      am: 'የተሌግራም ውይይት ክፈት',
+      en: 'Open Telegram Chat'
+    },
+    footerText: {
+      am: '© {year} ስፔሲፊክ ኢትዮጵያ — የክምችት አስተያየት ሲስተም። ሁሉም መብቶች የተያዙ ናቸው።',
+      en: '© {year} Specific Ethiopia — Inventory Management System. All rights reserved.'
+    },
+    needHelp: {
+      am: 'እገዛ ያስፈልጋል? በተሌግራም ቀጥታ መልክ ላክ: @{telegram}',
+      en: 'Need help? Direct message on Telegram: @{telegram}'
     }
   }
 };
