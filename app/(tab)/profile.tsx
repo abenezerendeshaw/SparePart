@@ -4,22 +4,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  Share,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Linking,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    Share,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import storage from '../lib/storage';
 import { useLanguage } from '../../context/LanguageContext';
+import { useSubscription } from '../../context/SubscriptionContext';
+import storage from '../lib/storage';
 
 interface UserData {
   id: number;
@@ -46,6 +47,7 @@ interface ApiResponse {
 export default function ProfileScreen() {
   const router = useRouter();
   const { t, language, setLanguage } = useLanguage();
+  const { details, plans, refreshStatus, telegramLink } = useSubscription();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -478,6 +480,64 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Subscription Status Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('status', 'subscription')}</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.subscriptionHeader}>
+              <View>
+                <Text style={styles.planNameText}>{details?.subscription_plan || 'Free Plan'}</Text>
+                <Text style={styles.expiryText}>
+                  {details?.subscription_expires_at 
+                    ? `${t('expires', 'subscription')}: ${formatDate(details.subscription_expires_at)}`
+                    : t('noActiveSubscription', 'subscription')}
+                </Text>
+              </View>
+              <View style={[
+                styles.statusBadge, 
+                { backgroundColor: details?.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  { color: details?.subscription_status === 'active' ? '#10b981' : '#ef4444' }
+                ]}>
+                  {details?.subscription_status === 'active' ? t('active', 'subscription') : t('expired', 'subscription')}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.divider} />
+            
+            <MenuItem
+              icon="ticket-percent"
+              title={t('availablePlans', 'subscription')}
+              color="#f59e0b"
+              onPress={() => router.push('/subscription-packages')}
+            />
+
+            {/* Upgrade Button - only show if not active */}
+            {details?.subscription_status !== 'active' && (
+              <>
+                <View style={styles.divider} />
+                <TouchableOpacity
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/subscription-packages')}
+                >
+                  <LinearGradient
+                    colors={['#2974ff', '#1a4c9e']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.upgradeGradient}
+                  >
+                    <MaterialCommunityIcons name="crown" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.upgradeButtonText}>{t('upgradeNow', 'subscription')}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
         {/* Sync Status */}
         {user.sync_status && (
           <View style={styles.syncStatusContainer}>
@@ -519,6 +579,13 @@ export default function ProfileScreen() {
             title={t('changePassword', 'profile')}
             color="#10b981"
             onPress={() => setPasswordModalVisible(true)}
+          />
+          
+          <MenuItem
+            icon="wallet"
+            title={t('expenses', 'navigation')}
+            color="#ef4444"
+            onPress={() => router.push('/(tab)/expenses')}
           />
           
           {/* Language Switcher - Added here below change password */}
@@ -1054,7 +1121,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // New styles for language switcher
   languageSwitcher: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
@@ -1100,5 +1166,49 @@ const styles = StyleSheet.create({
   },
   languageButtonTextActive: {
     color: '#2974ff',
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  planNameText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  expiryText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  upgradeButton: {
+    width: '100%',
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  upgradeGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

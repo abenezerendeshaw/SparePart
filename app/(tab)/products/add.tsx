@@ -20,6 +20,7 @@ import api from '../../lib/api';
 import storage from '../../lib/storage';
 import { useLanguage } from '../../../context/LanguageContext';
 import LanguageSwitcher from '../../../components/LanguageSwitcher';
+import { SubscriptionGuard } from '../../../components/SubscriptionGuard';
 
 export default function AddProductScreen() {
   const router = useRouter();
@@ -53,7 +54,6 @@ export default function AddProductScreen() {
     status: 'active',
   });
 
-  // Track which fields have been filled
   const [filledSections, setFilledSections] = useState({
     basic: false,
     details: false,
@@ -62,7 +62,6 @@ export default function AddProductScreen() {
     additional: false,
   });
 
-  // Check if basic section is complete
   useEffect(() => {
     if (form.product_name && form.product_code) {
       setFilledSections(prev => ({ ...prev, basic: true }));
@@ -75,14 +74,12 @@ export default function AddProductScreen() {
     }
   }, [form.product_name, form.product_code]);
 
-  // Check if details section has any input
   useEffect(() => {
     if (form.category || form.brand || form.description || form.unit !== 'pcs') {
       setFilledSections(prev => ({ ...prev, details: true }));
     }
   }, [form.category, form.brand, form.description, form.unit]);
 
-  // Check if pricing section is complete
   useEffect(() => {
     if (form.selling_price && Number(form.selling_price) > 0) {
       setFilledSections(prev => ({ ...prev, pricing: true }));
@@ -95,7 +92,6 @@ export default function AddProductScreen() {
     }
   }, [form.selling_price]);
 
-  // Check if stock section has any input
   useEffect(() => {
     if (form.total_stock || form.min_stock || form.max_stock) {
       setFilledSections(prev => ({ ...prev, stock: true }));
@@ -191,8 +187,6 @@ export default function AddProductScreen() {
         status: form.status || 'active',
       };
 
-      console.log('Sending product data:', productData);
-
       const response = await api.post('/products', productData, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -236,12 +230,8 @@ export default function AddProductScreen() {
       }
     } catch (error: any) {
       console.log('Error adding product:', error);
-      
       let errorMessage = t('error');
-      
       if (error.response) {
-        console.log('Error response:', error.response.data);
-        
         if (error.response.status === 400) {
           if (error.response.data.message?.includes('category')) {
             errorMessage = 'ምድብ ያስፈልጋል';
@@ -264,7 +254,6 @@ export default function AddProductScreen() {
       } else {
         errorMessage = error.message;
       }
-      
       Alert.alert(t('error'), errorMessage);
     } finally {
       setLoading(false);
@@ -328,418 +317,409 @@ export default function AddProductScreen() {
         </TouchableOpacity>
         
         {isExpanded && (
-          <Animated.View style={styles.sectionContent}>
+          <View style={styles.sectionContent}>
             {children}
-          </Animated.View>
+          </View>
         )}
       </View>
     );
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
-        
-        <ScrollView 
-          ref={scrollViewRef}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('title', 'addProduct')}</Text>
-            <LanguageSwitcher />
-          </View>
-
-          {/* Progress Indicator */}
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressStep, form.product_name && styles.progressStepComplete]}>
-              <MaterialCommunityIcons 
-                name={form.product_name ? "check" : "tag"} 
-                size={14} 
-                color={form.product_name ? "#10b981" : "#64748b"} 
-              />
+    <SubscriptionGuard>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
+          
+          <ScrollView 
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>{t('title', 'addProduct')}</Text>
+              <LanguageSwitcher />
             </View>
-            <View style={[styles.progressLine, form.product_name && styles.progressLineComplete]} />
-            <View style={[styles.progressStep, form.selling_price && styles.progressStepComplete]}>
-              <MaterialCommunityIcons 
-                name={form.selling_price ? "check" : "currency-usd"} 
-                size={14} 
-                color={form.selling_price ? "#10b981" : "#64748b"} 
-              />
-            </View>
-            <View style={[styles.progressLine, form.selling_price && styles.progressLineComplete]} />
-            <View style={[styles.progressStep, form.total_stock && styles.progressStepComplete]}>
-              <MaterialCommunityIcons 
-                name={form.total_stock ? "check" : "package-variant"} 
-                size={14} 
-                color={form.total_stock ? "#10b981" : "#64748b"} 
-              />
-            </View>
-          </View>
 
-          {/* Quick Summary */}
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryItem}>
-              <MaterialCommunityIcons 
-                name={form.product_name ? "check-circle" : "circle-outline"} 
-                size={16} 
-                color={form.product_name ? "#10b981" : "#64748b"} 
-              />
-              <Text style={[styles.summaryText, form.product_name && styles.summaryTextComplete]}>
-                {t('basicInfo', 'addProduct')}
-              </Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <MaterialCommunityIcons 
-                name={form.selling_price ? "check-circle" : "circle-outline"} 
-                size={16} 
-                color={form.selling_price ? "#10b981" : "#64748b"} 
-              />
-              <Text style={[styles.summaryText, form.selling_price && styles.summaryTextComplete]}>
-                {t('pricing', 'addProduct')}
-              </Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <MaterialCommunityIcons 
-                name={form.total_stock ? "check-circle" : "circle-outline"} 
-                size={16} 
-                color={form.total_stock ? "#10b981" : "#64748b"} 
-              />
-              <Text style={[styles.summaryText, form.total_stock && styles.summaryTextComplete]}>
-                {t('stock', 'addProduct')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Basic Information Section */}
-            {renderSection('basic', t('basicInfo', 'addProduct'), 'information', (
-              <>
-                {/* Product Name */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('productName', 'addProduct')} *</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="tag-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('productNamePlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.product_name}
-                      onChangeText={(value) => handleInputChange('product_name', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Product Code */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('productCode', 'addProduct')} *</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="barcode" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('productCodePlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.product_code}
-                      onChangeText={(value) => handleInputChange('product_code', value)}
-                    />
-                  </View>
-                </View>
-              </>
-            ), true)}
-
-            {/* Details Section */}
-            {renderSection('details', t('details', 'addProduct'), 'text-box', (
-              <>
-                {/* Category */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('category', 'addProduct')} *</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="shape-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('categoryPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.category}
-                      onChangeText={(value) => handleInputChange('category', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Brand */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('brand', 'addProduct')}</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="trademark" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('brandPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.brand}
-                      onChangeText={(value) => handleInputChange('brand', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Unit */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('unit', 'addProduct')}</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="scale" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('unitPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      value={form.unit}
-                      onChangeText={(value) => handleInputChange('unit', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Description */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('description', 'addProduct')}</Text>
-                  <View style={[styles.inputContainer, styles.textAreaContainer]}>
-                    <MaterialCommunityIcons name="text-box-outline" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder={t('descriptionPlaceholder', 'addProduct')}
-                      placeholderTextColor="#64748b"
-                      multiline
-                      numberOfLines={3}
-                      textAlignVertical="top"
-                      value={form.description}
-                      onChangeText={(value) => handleInputChange('description', value)}
-                    />
-                  </View>
-                </View>
-              </>
-            ))}
-
-            {/* Pricing Section */}
-            {renderSection('pricing', t('pricing', 'addProduct'), 'currency-usd', (
-              <>
-                {/* Price Row */}
-                <View style={styles.row}>
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('buyingPrice', 'addProduct')} *</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.buying_price}
-                        onChangeText={(value) => {
-                          setForm(prev => ({
-                            ...prev,
-                            buying_price: value,
-                            profit: ((Number(prev.selling_price) || 0) - (Number(value) || 0)).toString()
-                          }));
-                        }}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('sellingPrice', 'addProduct')} *</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.selling_price}
-                        onChangeText={(value) => {
-                          setForm(prev => ({
-                            ...prev,
-                            selling_price: value,
-                            profit: ((Number(value) || 0) - (Number(prev.buying_price) || 0)).toString()
-                          }));
-                        }}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Profit Display */}
-                {(form.buying_price || form.selling_price) && (
-                  <View style={styles.profitContainer}>
-                    <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
-                    <Text style={styles.profitText}>
-                      {t('profit', 'addProduct')}: {calculateProfit()} {t('currency', 'common')}
-                    </Text>
-                    <Text style={styles.profitPercent}>
-                      ({Number(form.buying_price) > 0 
-                        ? ((Number(form.selling_price || 0) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)
-                        : '0.0'}%)
-                    </Text>
-                  </View>
-                )}
-              </>
-            ), true)}
-
-            {/* Stock Management Section */}
-            {renderSection('stock', t('stock', 'addProduct'), 'package-variant', (
-              <>
-                {/* Total Stock */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.label}>{t('totalStock', 'addProduct')}</Text>
-                  <View style={styles.inputContainer}>
-                    <MaterialCommunityIcons name="package-variant" size={20} color="#64748b" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0"
-                      placeholderTextColor="#64748b"
-                      keyboardType="numeric"
-                      value={form.total_stock}
-                      onChangeText={(value) => handleInputChange('total_stock', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Min and Max Stock */}
-                <View style={styles.row}>
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('minStock', 'addProduct')}</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="arrow-down-circle" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.min_stock}
-                        onChangeText={(value) => handleInputChange('min_stock', value)}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('maxStock', 'addProduct')}</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="arrow-up-circle" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.max_stock}
-                        onChangeText={(value) => handleInputChange('max_stock', value)}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Stock Movement */}
-                <View style={styles.row}>
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('newArrival', 'addProduct')}</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="package-up" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.new_arrival_quantity}
-                        onChangeText={(value) => handleInputChange('new_arrival_quantity', value)}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={[styles.inputWrapper, styles.halfWidth]}>
-                    <Text style={styles.label}>{t('soldQuantity', 'addProduct')}</Text>
-                    <View style={styles.inputContainer}>
-                      <MaterialCommunityIcons name="cart" size={20} color="#64748b" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor="#64748b"
-                        keyboardType="numeric"
-                        value={form.selling_quantity}
-                        onChangeText={(value) => handleInputChange('selling_quantity', value)}
-                      />
-                    </View>
-                  </View>
-                </View>
-              </>
-            ))}
-
-            {/* Additional Section - Status */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionHeaderLeft}>
-                  <View style={styles.sectionIcon}>
-                    <MaterialCommunityIcons name="toggle-switch" size={20} color="#64748b" />
-                  </View>
-                  <Text style={styles.sectionTitle}>{t('status', 'addProduct')}</Text>
-                </View>
+            {/* Progress Indicator */}
+            <View style={styles.progressContainer}>
+              <View style={[styles.progressStep, form.product_name && styles.progressStepComplete]}>
+                <MaterialCommunityIcons 
+                  name={form.product_name ? "check" : "tag"} 
+                  size={14} 
+                  color={form.product_name ? "#10b981" : "#64748b"} 
+                />
               </View>
-              <View style={styles.sectionContent}>
-                <View style={styles.statusContainer}>
-                  <TouchableOpacity
-                    style={[styles.statusOption, form.status === 'active' && styles.statusOptionActive]}
-                    onPress={() => handleInputChange('status', 'active')}
-                  >
-                    <MaterialCommunityIcons 
-                      name="check-circle" 
-                      size={16} 
-                      color={form.status === 'active' ? '#10b981' : '#64748b'} 
-                    />
-                    <Text style={[styles.statusOptionText, form.status === 'active' && styles.statusOptionTextActive]}>
-                      {t('active', 'addProduct')}
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[styles.statusOption,   form.status === 'inactive' && styles.statusOptionInactive]}
-                    onPress={() => handleInputChange('status', 'inactive')}
-                  >
-                    <MaterialCommunityIcons 
-                      name="close-circle" 
-                      size={16} 
-                      color={form.status === 'inactive' ? '#ef4444' : '#64748b'} 
-                    />
-                    <Text style={[styles.statusOptionText, form.status === 'inactive' && styles.statusOptionTextInactive]}>
-                      {t('inactive', 'addProduct')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={[styles.progressLine, form.product_name && styles.progressLineComplete]} />
+              <View style={[styles.progressStep, form.selling_price && styles.progressStepComplete]}>
+                <MaterialCommunityIcons 
+                  name={form.selling_price ? "check" : "currency-usd"} 
+                  size={14} 
+                  color={form.selling_price ? "#10b981" : "#64748b"} 
+                />
+              </View>
+              <View style={[styles.progressLine, form.selling_price && styles.progressLineComplete]} />
+              <View style={[styles.progressStep, form.total_stock && styles.progressStepComplete]}>
+                <MaterialCommunityIcons 
+                  name={form.total_stock ? "check" : "package-variant"} 
+                  size={14} 
+                  color={form.total_stock ? "#10b981" : "#64748b"} 
+                />
               </View>
             </View>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitButton, styles.MBUTON, loading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
+            {/* Quick Summary */}
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryItem}>
+                <MaterialCommunityIcons 
+                  name={form.product_name ? "check-circle" : "circle-outline"} 
+                  size={16} 
+                  color={form.product_name ? "#10b981" : "#64748b"} 
+                />
+                <Text style={[styles.summaryText, form.product_name && styles.summaryTextComplete]}>
+                  {t('basicInfo', 'addProduct')}
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <MaterialCommunityIcons 
+                  name={form.selling_price ? "check-circle" : "circle-outline"} 
+                  size={16} 
+                  color={form.selling_price ? "#10b981" : "#64748b"} 
+                />
+                <Text style={[styles.summaryText, form.selling_price && styles.summaryTextComplete]}>
+                  {t('pricing', 'addProduct')}
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <MaterialCommunityIcons 
+                  name={form.total_stock ? "check-circle" : "circle-outline"} 
+                  size={16} 
+                  color={form.total_stock ? "#10b981" : "#64748b"} 
+                />
+                <Text style={[styles.summaryText, form.total_stock && styles.summaryTextComplete]}>
+                  {t('stock', 'addProduct')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Form */}
+            <View style={styles.form}>
+              {/* Basic Information Section */}
+              {renderSection('basic', t('basicInfo', 'addProduct'), 'information', (
                 <>
-                  <MaterialCommunityIcons name="check-circle" size={20} color="#ffffff" />
-                  <Text style={styles.submitButtonText}>{t('addProduct', 'addProduct')}</Text>
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('productName', 'addProduct')} *</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="tag-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('productNamePlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        value={form.product_name}
+                        onChangeText={(value) => handleInputChange('product_name', value)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('productCode', 'addProduct')} *</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="barcode" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('productCodePlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        value={form.product_code}
+                        onChangeText={(value) => handleInputChange('product_code', value)}
+                      />
+                    </View>
+                  </View>
                 </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+              ), true)}
+
+              {/* Details Section */}
+              {renderSection('details', t('details', 'addProduct'), 'text-box', (
+                <>
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('category', 'addProduct')} *</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="shape-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('categoryPlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        value={form.category}
+                        onChangeText={(value) => handleInputChange('category', value)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('brand', 'addProduct')}</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="trademark" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('brandPlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        value={form.brand}
+                        onChangeText={(value) => handleInputChange('brand', value)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('unit', 'addProduct')}</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="scale" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('unitPlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        value={form.unit}
+                        onChangeText={(value) => handleInputChange('unit', value)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('description', 'addProduct')}</Text>
+                    <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                      <MaterialCommunityIcons name="text-box-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        placeholder={t('descriptionPlaceholder', 'addProduct')}
+                        placeholderTextColor="#64748b"
+                        multiline
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                        value={form.description}
+                        onChangeText={(value) => handleInputChange('description', value)}
+                      />
+                    </View>
+                  </View>
+                </>
+              ))}
+
+              {/* Pricing Section */}
+              {renderSection('pricing', t('pricing', 'addProduct'), 'currency-usd', (
+                <>
+                  <View style={styles.row}>
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('buyingPrice', 'addProduct')} *</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="cash-minus" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0.00"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.buying_price}
+                          onChangeText={(value) => {
+                            setForm(prev => ({
+                              ...prev,
+                              buying_price: value,
+                              profit: ((Number(prev.selling_price) || 0) - (Number(value) || 0)).toString()
+                            }));
+                          }}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('sellingPrice', 'addProduct')} *</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="cash-plus" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0.00"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.selling_price}
+                          onChangeText={(value) => {
+                            setForm(prev => ({
+                              ...prev,
+                              selling_price: value,
+                              profit: ((Number(value) || 0) - (Number(prev.buying_price) || 0)).toString()
+                            }));
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  {(form.buying_price || form.selling_price) && (
+                    <View style={styles.profitContainer}>
+                      <MaterialCommunityIcons name="trending-up" size={20} color="#10b981" />
+                      <Text style={styles.profitText}>
+                        {t('profit', 'addProduct')}: {calculateProfit()} {t('currency', 'common')}
+                      </Text>
+                      <Text style={styles.profitPercent}>
+                        ({Number(form.buying_price) > 0 
+                          ? ((Number(form.selling_price || 0) - Number(form.buying_price)) / Number(form.buying_price) * 100).toFixed(1)
+                          : '0.0'}%)
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ), true)}
+
+              {/* Stock Management Section */}
+              {renderSection('stock', t('stock', 'addProduct'), 'package-variant', (
+                <>
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>{t('totalStock', 'addProduct')}</Text>
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons name="package-variant" size={20} color="#64748b" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="0"
+                        placeholderTextColor="#64748b"
+                        keyboardType="numeric"
+                        value={form.total_stock}
+                        onChangeText={(value) => handleInputChange('total_stock', value)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('minStock', 'addProduct')}</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="arrow-down-circle" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.min_stock}
+                          onChangeText={(value) => handleInputChange('min_stock', value)}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('maxStock', 'addProduct')}</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="arrow-up-circle" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.max_stock}
+                          onChangeText={(value) => handleInputChange('max_stock', value)}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('newArrival', 'addProduct')}</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="package-up" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.new_arrival_quantity}
+                          onChangeText={(value) => handleInputChange('new_arrival_quantity', value)}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.inputWrapper, styles.halfWidth]}>
+                      <Text style={styles.label}>{t('soldQuantity', 'addProduct')}</Text>
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="cart" size={20} color="#64748b" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="0"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          value={form.selling_quantity}
+                          onChangeText={(value) => handleInputChange('selling_quantity', value)}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </>
+              ))}
+
+              {/* Status Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionHeaderLeft}>
+                    <View style={styles.sectionIcon}>
+                      <MaterialCommunityIcons name="toggle-switch" size={20} color="#64748b" />
+                    </View>
+                    <Text style={styles.sectionTitle}>{t('status', 'addProduct')}</Text>
+                  </View>
+                </View>
+                <View style={styles.sectionContent}>
+                  <View style={styles.statusContainer}>
+                    <TouchableOpacity
+                      style={[styles.statusOption, form.status === 'active' && styles.statusOptionActive]}
+                      onPress={() => handleInputChange('status', 'active')}
+                    >
+                      <MaterialCommunityIcons 
+                        name="check-circle" 
+                        size={16} 
+                        color={form.status === 'active' ? '#10b981' : '#64748b'} 
+                      />
+                      <Text style={[styles.statusOptionText, form.status === 'active' && styles.statusOptionTextActive]}>
+                        {t('active', 'addProduct')}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.statusOption,   form.status === 'inactive' && styles.statusOptionInactive]}
+                      onPress={() => handleInputChange('status', 'inactive')}
+                    >
+                      <MaterialCommunityIcons 
+                        name="close-circle" 
+                        size={16} 
+                        color={form.status === 'inactive' ? '#ef4444' : '#64748b'} 
+                      />
+                      <Text style={[styles.statusOptionText, form.status === 'inactive' && styles.statusOptionTextInactive]}>
+                        {t('inactive', 'addProduct')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <MaterialCommunityIcons name="check-circle" size={20} color="#ffffff" />
+                    <Text style={styles.submitButtonText}>{t('addProduct', 'addProduct')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </LinearGradient>
+      </KeyboardAvoidingView>
+    </SubscriptionGuard>
   );
 }
 
@@ -802,11 +782,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 20,
-    marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginHorizontal: 20,
+    marginBottom: 24,
   },
   summaryItem: {
     flexDirection: 'row',
@@ -819,13 +795,14 @@ const styles = StyleSheet.create({
   },
   summaryTextComplete: {
     color: '#10b981',
+    fontWeight: '600',
   },
   form: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
   section: {
-    marginBottom: 12,
+    marginBottom: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 16,
     overflow: 'hidden',
@@ -836,14 +813,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   sectionHeaderExpanded: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderBottomWidth: 1,
-    borderBottomColor: '#10b981',
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   sectionHeaderFilled: {
     backgroundColor: 'rgba(16, 185, 129, 0.05)',
@@ -854,18 +829,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   sectionIconExpanded: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   sectionIconFilled: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
   },
   sectionTitle: {
     fontSize: 16,
@@ -873,10 +848,13 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
   },
   sectionTitleExpanded: {
-    color: '#10b981',
+    color: '#ffffff',
   },
   sectionTitleFilled: {
     color: '#10b981',
+  },
+  requiredStar: {
+    color: '#ef4444',
   },
   sectionHeaderRight: {
     flexDirection: 'row',
@@ -884,16 +862,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completedBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
     backgroundColor: '#10b981',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
   },
   completedBadgeText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   sectionContent: {
@@ -904,38 +882,34 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#cbd5e1',
+    color: '#94a3b8',
     marginBottom: 8,
-  },
-  requiredStar: {
-    color: '#ef4444',
+    marginLeft: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 22, 35, 0.6)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    minHeight: 56,
-  },
-  textAreaContainer: {
-    minHeight: 100,
+    paddingHorizontal: 12,
   },
   inputIcon: {
-    paddingHorizontal: 12,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    height: '100%',
+    height: 48,
     color: '#ffffff',
-    fontSize: 16,
-    paddingVertical: 14,
-    paddingRight: 12,
+    fontSize: 15,
+  },
+  textAreaContainer: {
+    alignItems: 'flex-start',
+    paddingTop: 12,
   },
   textArea: {
-    minHeight: 100,
+    height: 80,
     textAlignVertical: 'top',
   },
   row: {
@@ -951,19 +925,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
     padding: 12,
-    borderRadius: 8,
-    gap: 8,
-    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+    marginTop: -4,
+    marginBottom: 16,
   },
   profitText: {
     color: '#10b981',
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   profitPercent: {
-    color: '#94a3b8',
-    fontSize: 14,
+    color: '#10b981',
+    fontSize: 12,
+    marginLeft: 4,
+    opacity: 0.8,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -975,18 +952,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 8,
   },
-
-  MBUTON:{
-    marginBottom: 80,
-  },
-
   statusOptionActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderColor: '#10b981',
@@ -996,9 +967,8 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
   },
   statusOptionText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#64748b',
+    fontWeight: '600',
   },
   statusOptionTextActive: {
     color: '#10b981',
@@ -1010,21 +980,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b981',
-    paddingVertical: 18,
+    backgroundColor: '#2974ff',
+    height: 56,
     borderRadius: 16,
-    gap: 8,
-    marginTop: 24,
-    marginBottom: 20,
-    shadowColor: '#10b981',
+    gap: 10,
+    marginTop: 20,
+    shadowColor: '#2974ff',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: '#4b5563',
-    shadowOpacity: 0,
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#ffffff',

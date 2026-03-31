@@ -436,8 +436,8 @@ export const translations: Translations = {
       en: 'Inactive'
     },
     expenses: {
-      am: 'ወጪዎች',
-      en: 'Expenses'
+      am: 'ወጪዎችህን አስገባ',
+      en: 'Add Expenses'
     },
   },
   
@@ -1497,7 +1497,7 @@ inventory: {
   expenses: {
     title: {
       am: 'ወጪዎች',
-      en: 'Expenses'
+      en: 'Add Expenses'
     },
     addExpense: {
       am: 'ወጪ ጨምር',
@@ -1550,6 +1550,60 @@ inventory: {
     other: {
       am: 'ሌሎች',
       en: 'Other'
+    }
+  },
+  subscription: {
+    status: {
+      am: 'የደንበኝነት ሁኔታ',
+      en: 'Subscription Status'
+    },
+    plan: {
+      am: 'ፕላን',
+      en: 'Plan'
+    },
+    expires: {
+      am: 'የሚያበቃበት ቀን',
+      en: 'Expires'
+    },
+    active: {
+      am: 'ንቁ',
+      en: 'Active'
+    },
+    expired: {
+      am: 'ጊዜው ያለፈበት',
+      en: 'Expired'
+    },
+    trial: {
+      am: 'የሙከራ ጊዜ',
+      en: 'Trial'
+    },
+    locked: {
+      am: 'የታገደ',
+      en: 'Locked'
+    },
+    restrictedTitle: {
+      am: 'መለያዎ ተገድቧል',
+      en: 'Account Restricted'
+    },
+    restrictedMessage: {
+      am: 'እባክዎ መተግበሪያውን መጠቀሙን ለመቀጠል የደንበኝነት ምዝገባዎን ያድሱ።',
+      en: 'Please renew your subscription to continue using the application features.'
+    },
+    contactAdmin: {
+      am: 'አስተዳዳሪን ያነጋግሩ',
+      en: 'Contact Admin'
+    },
+    availablePlans: {
+      am: 'የሚገኙ ፕላኖች',
+      en: 'Available Plans'
+    },
+    activationInstructions: {
+      am: 'የማግበሪያ መመሪያዎች',
+      en: 'Activation Instructions'
+    },
+    priceOnRequest: {
+      am: 'አስተዳዳሪን ይጠይቁ',
+      en: 'Contact Admin for Price'
     }
   }
 };

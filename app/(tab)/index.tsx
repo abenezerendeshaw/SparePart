@@ -1,37 +1,35 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedScrollHandler,
-  interpolate,
-  Extrapolate,
-  withSpring,
-} from 'react-native-reanimated';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  RefreshControl,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Linking,
-  ScrollView,
-  Modal,
-  Image,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import Animated, {
+    Extrapolate,
+    interpolate,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+} from 'react-native-reanimated';
 
-import storage from '../lib/storage';
-import api from '../lib/api';
-import { useLanguage } from '../../context/LanguageContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { useLanguage } from '../../context/LanguageContext';
+import api from '../lib/api';
 import { schedulePushNotification } from '../lib/notificationService';
+import storage from '../lib/storage';
 
 const { width } = Dimensions.get('window');
 
@@ -757,13 +755,15 @@ export default function Dashboard() {
                 <Text style={styles.actionText}>{t('salesHistory', 'common')}</Text>
               </LinearGradient>
             </TouchableOpacity>
+
+            
           </View>
         </View>
 
         {/* Contact Support Button */}
-        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
-          <MaterialCommunityIcons name="headset" size={20} color="#2974ff" />
-          <Text style={styles.supportText}>{t('support', 'common')}</Text>
+        <TouchableOpacity style={styles.supportButton} onPress={() => router.push('/(tab)/expenses')}>
+          <MaterialCommunityIcons name="wallet" size={20} color="#2974ff" />
+          <Text style={styles.actionText}>{t('expenses', 'navigation')}</Text>
         </TouchableOpacity>
 
 

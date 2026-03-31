@@ -1,14 +1,12 @@
-import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { View, StyleSheet, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Redirect, Tabs } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
-import storage from './../lib/storage';
-import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
+import storage from './../lib/storage';
 
 const { width } = Dimensions.get('window');
 
@@ -183,23 +181,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="expenses"
-        options={{
-          title: t('expenses', 'navigation'),
-          tabBarLabel: t('expenses', 'navigation'),
-          tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-              <MaterialCommunityIcons
-                name={focused ? 'wallet' : 'wallet-outline'}
-                size={22}
-                color={color}
-              />
-            </View>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="profile"
         options={{
           title: t('profile', 'navigation'),
@@ -218,6 +199,7 @@ export default function TabLayout() {
 
       {/* Hidden screens - these won't show in tab bar */}
       <Tabs.Screen name="products/add" options={{ href: null }} />
+      <Tabs.Screen name="expenses" options={{ href: null }} />
       <Tabs.Screen name="sales/new" options={{ href: null }} />
       <Tabs.Screen name="sales/[id]" options={{ href: null }} />
       <Tabs.Screen name="sales/receipt" options={{ href: null }} />

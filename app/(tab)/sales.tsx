@@ -16,6 +16,7 @@ import api from '../lib/api';
 import events from '../lib/events';
 import { listExpenses } from '../lib/expensesApi';
 import storage from '../lib/storage';
+import { FeatureGuard } from '@/components/FeatureGuard';
 
 const { width } = Dimensions.get('window');
 
@@ -453,7 +454,8 @@ export default function SalesScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
+    <FeatureGuard feature="sales" featureName={t('sales', 'navigation')}>
+      <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
 
       {/* Animated Header */}
@@ -895,6 +897,7 @@ export default function SalesScreen() {
         </View>
       </Modal>
     </LinearGradient>
+    </FeatureGuard>
   );
 }
 

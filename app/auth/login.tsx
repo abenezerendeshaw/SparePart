@@ -21,10 +21,12 @@ import React from 'react';
 import { Linking } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { refreshStatus } = useSubscription();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,6 +85,9 @@ export default function LoginScreen() {
         } else {
           await storage.removeItem('rememberedEmail');
         }
+
+        // Refresh subscription status now that we have a token
+        await refreshStatus();
 
         router.replace('/(tab)');
       } else {

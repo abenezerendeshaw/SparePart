@@ -1,23 +1,32 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, 
-  Alert, RefreshControl, TextInput, Dimensions, 
-  ActivityIndicator, 
-  StatusBar,
-ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
-import api from '../lib/api';
-import storage from '../lib/storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedScrollHandler,
-  interpolate,
-  Extrapolate,
-  withSpring,
+    Extrapolate,
+    interpolate,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 import { useLanguage } from '../../context/LanguageContext';
+import api from '../lib/api';
+import storage from '../lib/storage';
+import { FeatureGuard } from '@/components/FeatureGuard';
 
 const { width } = Dimensions.get('window');
 interface Product {
@@ -339,7 +348,8 @@ export default function InventoryScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
+    <FeatureGuard feature="inventory" featureName={t('inventory', 'navigation')}>
+      <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1623" />
 
       {/* Animated Header */}
@@ -562,6 +572,7 @@ export default function InventoryScreen() {
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
     </LinearGradient>
+    </FeatureGuard>
   );
 }
 
