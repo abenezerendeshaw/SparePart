@@ -17,6 +17,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useLanguage } from '../../../context/LanguageContext';
+import api from '../../lib/api';
+import storage from '../../lib/storage';
 
 // For debugging - log every render
 let renderCount = 0;
@@ -48,47 +50,6 @@ export default function SaleDetailScreen() {
   const fetchSaleDetails = async () => {
     console.log('🔷 fetchSaleDetails started');
     try {
-      // For testing - let's set mock data first to see if UI renders
-      console.log('🔷 Setting mock data for testing');
-      setSale({
-        id: 9,
-        sale_code: "SALE-20260306-C6C809",
-        customer_name: t('walkInCustomer', 'sales'),
-        customer_phone: "",
-        customer_email: "",
-        total_amount: "38500.00",
-        discount: "0.00",
-        grand_total: "38500.00",
-        paid_amount: "38500.00",
-        due_amount: "0.00",
-        profit: "2000",
-        payment_method: "cash",
-        payment_status: "paid",
-        sale_date: "2026-03-06",
-        sale_time: "17:01:32",
-        notes: "",
-        cashier_name: "owner",
-        items: [
-          {
-            id: 1,
-            product_name: "Test Product 1",
-            quantity: 2,
-            unit_price: 1000,
-            total_price: 2000
-          },
-          {
-            id: 2,
-            product_name: "Test Product 2",
-            quantity: 1,
-            unit_price: 500,
-            total_price: 500
-          }
-        ]
-      });
-      setLoading(false);
-      
-      // Comment out the actual API call for now to test UI
-      /*
       const token = await storage.getItem('authToken');
       if (!token) {
         router.replace('/auth/login');
@@ -101,11 +62,12 @@ export default function SaleDetailScreen() {
 
       if (response.data.status === 'success') {
         setSale(response.data.data);
+      } else {
+        setError(response.data.message || t('saleFetchFailed', 'sales'));
       }
-      */
     } catch (error: any) {
       console.error('Error fetching sale:', error);
-      setError(error.message || t('saleFetchFailed', 'sales'));
+      setError(error.response?.data?.message || error.message || t('saleFetchFailed', 'sales'));
     } finally {
       setLoading(false);
       setRefreshing(false);

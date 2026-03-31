@@ -46,7 +46,6 @@ export default function TabLayout() {
           height: 70,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
-          elevation: 0,
           borderRadius: 20,
           marginHorizontal: 5,
           shadowColor: '#2974ff',
@@ -175,6 +174,23 @@ export default function TabLayout() {
             <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
               <MaterialCommunityIcons
                 name="warehouse"
+                size={22}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: t('expenses', 'navigation'),
+          tabBarLabel: t('expenses', 'navigation'),
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+              <MaterialCommunityIcons
+                name={focused ? 'wallet' : 'wallet-outline'}
                 size={22}
                 color={color}
               />

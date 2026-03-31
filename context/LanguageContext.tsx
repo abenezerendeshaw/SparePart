@@ -435,6 +435,10 @@ export const translations: Translations = {
       am: 'የታገዱ',
       en: 'Inactive'
     },
+    expenses: {
+      am: 'ወጪዎች',
+      en: 'Expenses'
+    },
   },
   
   // Add Product Screen
@@ -1488,6 +1492,64 @@ inventory: {
     prices: {
       am: 'ዋጋዎች',
       en: 'Prices'
+    }
+  },
+  expenses: {
+    title: {
+      am: 'ወጪዎች',
+      en: 'Expenses'
+    },
+    addExpense: {
+      am: 'ወጪ ጨምር',
+      en: 'Add Expense'
+    },
+    editExpense: {
+      am: 'ወጪ አርትዕ',
+      en: 'Edit Expense'
+    },
+    totalExpenses: {
+      am: 'ጠቅላላ ወጪዎች',
+      en: 'Total Expenses'
+    },
+    expenseCategory: {
+      am: 'የወጪ ምድብ',
+      en: 'Expense Category'
+    },
+    expenseDescription: {
+      am: 'የወጪ መግለጫ',
+      en: 'Expense Description'
+    },
+    expenseDate: {
+      am: 'የወጪ ቀን',
+      en: 'Expense Date'
+    },
+    deleteConfirmTitle: {
+      am: 'ወጪ ሰርዝ?',
+      en: 'Delete Expense?'
+    },
+    deleteConfirmMessage: {
+      am: 'ይህንን የወጪ መዝገብ መሰረዝ እንደሚፈልጉ እርግጠኛ ነዎት?',
+      en: 'Are you sure you want to delete this expense record?'
+    },
+    rent: {
+      am: 'ቤት ኪራይ',
+      en: 'Rent'
+    },
+    utilities: {
+      am: 'መገልገያዎች',
+      en: 'Utilities'
+    },
+    salaries: {
+      am: 'ደመወዝ',
+      en: 'Salaries'
+    },
+    marketing: {
+      am: 'ማስተዋወቂያ',
+      en: 'Marketing'
+    },
+    other: {
+      am: 'ሌሎች',
+      en: 'Other'
     }
   }
 };

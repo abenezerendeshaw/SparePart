@@ -1,19 +1,21 @@
-import { StatusBar, View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, TextInput, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
-import api from '../lib/api';
-import storage from '../lib/storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedScrollHandler,
-  interpolate,
-  Extrapolate,
-  withSpring,
+    Extrapolate,
+    interpolate,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 import { useLanguage } from '../../context/LanguageContext';
+import api from '../lib/api';
+import events from '../lib/events';
+import { listExpenses } from '../lib/expensesApi';
+import storage from '../lib/storage';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +59,8 @@ export default function SalesScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expensesModalVisible, setExpensesModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,8 +116,17 @@ export default function SalesScreen() {
     };
   });
 
+  // Animated style for the collapsible expense list (call hook unconditionally)
+  
+
   useEffect(() => {
     fetchSales();
+    // Listen for external expense changes and refresh sales immediately
+    const handle = () => fetchSales();
+    events.on('expensesChanged', handle);
+    return () => {
+      events.off('expensesChanged', handle);
+    };
   }, []);
 
   // Refresh when screen comes into focus
@@ -133,9 +146,17 @@ export default function SalesScreen() {
 
       const response = await api.get('/sales?limit=100');
       const salesData = response.data?.data?.sales || [];
-      
+      // also fetch expenses so net profit can account for them
+      let expensesData = [];
+      try {
+        expensesData = await listExpenses();
+      } catch (e) {
+        console.warn('Failed to load expenses for profit calculation', e);
+      }
+
       setSales(salesData);
-      calculateStats(salesData);
+      setExpenses(Array.isArray(expensesData) ? expensesData : []);
+      calculateStats(salesData, Array.isArray(expensesData) ? expensesData : []);
 
     } catch (error) {
       console.error('Error fetching sales:', error);
@@ -151,7 +172,7 @@ export default function SalesScreen() {
     fetchSales();
   };
 
-  const calculateStats = (salesData: Sale[]) => {
+  const calculateStats = (salesData: Sale[], expensesData: any[] = []) => {
     const today = new Date().toISOString().split('T')[0];
     const todaySales = salesData.filter(s => s.sale_date === today);
     const cashSales = salesData.filter(s => s.payment_method === 'cash');
@@ -160,11 +181,15 @@ export default function SalesScreen() {
     const totalRevenue = salesData.reduce((sum, s) => sum + Number(s.grand_total), 0);
     const totalProfit = salesData.reduce((sum, s) => sum + Number(s.profit), 0);
 
+    // total expenses (all) - keep as number
+    const totalExpenses = expensesData.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
     setStats({
       totalSales: salesData.length,
       todaySales: todaySales.length,
       totalRevenue,
       todayRevenue: todaySales.reduce((sum, s) => sum + Number(s.grand_total), 0),
+      // Keep `totalProfit` as the raw sum of sales profit (no expense adjustments)
       totalProfit,
       averageSaleValue: salesData.length > 0 ? totalRevenue / salesData.length : 0,
       cashSales: salesData.filter(s => s.payment_method === 'cash').length,
@@ -228,18 +253,49 @@ export default function SalesScreen() {
       totalTax += taxAmount;
       totalProfitAfterTax += profitAfterTax;
     });
-    // Donations:
+    // Donations (kept for display):
     const churchDonation = totalProfit * 0.10; // Asrat / church donation (10%)
     const zakat = totalProfit * 0.025; // Zakat (2.5%)
+
+    // Calculate filtered expenses for the same date range/filter as filteredSales
+    const filteredExpenses = expenses.filter(exp => {
+      const expDate = (exp.expense_date || '').toString().split('T')[0];
+      if (!expDate) return false;
+      const d = new Date(expDate);
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const monthAgo = new Date(today);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+      switch (selectedFilter) {
+        case 'today':
+          return expDate === today.toISOString().split('T')[0];
+        case 'week':
+          return d >= weekAgo;
+        case 'month':
+          return d >= monthAgo;
+        default:
+          return true;
+      }
+    });
+
+    const totalFilteredExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+    // Net after expenses should be raw totalProfit minus filtered expenses (no other deductions)
+    const netAfterExpenses = totalFilteredExpenses > 0 ? (totalProfit - totalFilteredExpenses) : totalProfit;
+
     return {
       totalProfit,
       totalTax,
       totalProfitAfterTax,
       donation: churchDonation,
       zakat,
-      netProfit: totalProfit - totalTax - churchDonation - zakat,
+      expenses: totalFilteredExpenses,
+      filteredExpenses,
+      netProfit: netAfterExpenses,
     };
-  }, [filteredSales]);
+  }, [filteredSales, expenses, selectedFilter]);
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method?.toLowerCase()) {
@@ -492,8 +548,21 @@ export default function SalesScreen() {
             colors={['#8b5cf6', '#6d28d9']}
             style={styles.statCard}
           >
-            <Text style={styles.statValue}>{t('currency', 'common')} {stats.totalProfit.toLocaleString()}</Text>
+            <Text style={styles.statValue}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
             <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
+
+            {/* Expenses button */}
+            {filteredProfits.filteredExpenses && filteredProfits.filteredExpenses.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setExpensesModalVisible(true)}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}
+              >
+                <Text style={[styles.statSmall, { fontWeight: '700' }]}>{t('expenses', 'sales') || 'Expenses'}</Text>
+                <MaterialCommunityIcons name="eye" size={18} color="rgba(255,255,255,0.9)" />
+              </TouchableOpacity>
+            ) : (
+              <Text style={[styles.statSmall, { marginTop: 8 }]}>{t('expenses', 'sales') || 'Expenses'}: {t('currency', 'common')} {Number(filteredProfits.expenses || 0).toLocaleString()}</Text>
+            )}
           </LinearGradient>
 
           <LinearGradient
@@ -661,6 +730,72 @@ export default function SalesScreen() {
           <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Expenses Modal */}
+      <Modal
+        visible={expensesModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setExpensesModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Profit Calculation & Expenses</Text>
+              <TouchableOpacity onPress={() => setExpensesModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Profit Calculation Section */}
+              <View style={styles.calculationSection}>
+                <Text style={styles.sectionTitle}>Profit Calculation</Text>
+                <View style={styles.calculationCard}>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>Raw Profit</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.totalProfit.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>- Expenses</Text>
+                    <Text style={styles.calculationAmount}>-{t('currency', 'common')} {filteredProfits.expenses.toLocaleString()}</Text>
+                  </View>
+                  <View style={[styles.calculationRow, styles.totalRow]}>
+                    <Text style={styles.calculationLabel}>Net Profit</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Expenses List Section */}
+              <View style={styles.expensesSection}>
+                <Text style={styles.sectionTitle}>Expense Details ({filteredProfits.filteredExpenses?.length || 0})</Text>
+                {filteredProfits.filteredExpenses && filteredProfits.filteredExpenses.length > 0 ? (
+                  filteredProfits.filteredExpenses.map((expense: any) => (
+                    <View key={expense.id} style={styles.expenseCard}>
+                      <View style={styles.expenseHeader}>
+                        <Text style={styles.expenseCategory}>{expense.category}</Text>
+                        <Text style={styles.expenseAmount}>{t('currency', 'common')} {Number(expense.amount).toLocaleString()}</Text>
+                      </View>
+                      {expense.description && (
+                        <Text style={styles.expenseDescription}>{expense.description}</Text>
+                      )}
+                      <Text style={styles.expenseDate}>
+                        {new Date(expense.expense_date).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.noExpensesContainer}>
+                    <MaterialCommunityIcons name="cash-remove" size={48} color="#475569" />
+                    <Text style={styles.noExpensesText}>No expenses found for this period</Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -756,6 +891,124 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
+  },
+  statSmall: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a2634',
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  calculationSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+    marginBottom: 12,
+  },
+  calculationCard: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  calculationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  calculationLabel: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+  },
+  calculationAmount: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.3)',
+    paddingTop: 12,
+    marginTop: 8,
+  },
+  expensesSection: {
+    marginBottom: 20,
+  },
+  expenseCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  expenseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  expenseCategory: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  expenseAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ef4444',
+  },
+  expenseDescription: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 4,
+  },
+  expenseDate: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  noExpensesContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  noExpensesText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: 'center',
   },
   statLabel: {
     color: 'rgba(255, 255, 255, 0.8)',
