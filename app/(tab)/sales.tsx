@@ -61,13 +61,13 @@ export default function SalesScreen() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [expensesModalVisible, setExpensesModalVisible] = useState(false);
+  const [donationModalVisible, setDonationModalVisible] = useState(false);
+  const [zakatModalVisible, setZakatModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week' | 'month' | 'paid' | 'due'>('all');
   const [selectedPayment, setSelectedPayment] = useState<'all' | 'cash' | 'card' | 'transfer' | 'bank_transfer'>('all');
-  const [donationExpanded, setDonationExpanded] = useState(false);
-  const [zekatExpanded, setZekatExpanded] = useState(false);
   const [stats, setStats] = useState<SalesStats>({
     totalSales: 0,
     todaySales: 0,
@@ -437,28 +437,6 @@ export default function SalesScreen() {
     </TouchableOpacity>
   );
 
-  // Helper component for expandable stat card
-  const ExpandableStatCard = ({ gradientColors, amount, label, expanded, setExpanded, description }) => (
-    <LinearGradient colors={gradientColors} style={styles.statCard}>
-      <Text style={styles.statValue}>{amount} {t('currency', 'common')}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      <View style={styles.expandableRow}>
-        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.expandButton}>
-          <MaterialCommunityIcons
-            name={expanded ? "chevron-up" : "chevron-down"}
-            size={20}
-            color="rgba(255,255,255,0.8)"
-          />
-        </TouchableOpacity>
-      </View>
-      {expanded && (
-        <Text style={styles.descriptionText}>
-          {description}
-        </Text>
-      )}
-    </LinearGradient>
-  );
-
   if (loading) {
     return (
       <LinearGradient colors={['#0f1623', '#1a2634']} style={styles.container}>
@@ -524,7 +502,7 @@ export default function SalesScreen() {
           </View>
         </View>
 
-        {/* Stats Cards (including expandable donation & zakat) */}
+        {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <LinearGradient
             colors={['#f59e0b', '#d97706']}
@@ -548,20 +526,24 @@ export default function SalesScreen() {
             colors={['#8b5cf6', '#6d28d9']}
             style={styles.statCard}
           >
-            <Text style={styles.statValue}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{t('currency', 'common')} {filteredProfits.netProfit.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>{t('totalProfit', 'sales')}</Text>
 
-            {/* Expenses button */}
-            {filteredProfits.filteredExpenses && filteredProfits.filteredExpenses.length > 0 ? (
+              {/* Expenses button */}
+              {filteredProfits.filteredExpenses && filteredProfits.filteredExpenses.length > 0 ? (
+                <Text style={[styles.statSmall, { marginTop: 8 }]}>{t('expenses', 'sales') || 'Expenses'}: {t('currency', 'common')} {Number(filteredProfits.expenses || 0).toLocaleString()}</Text>
+              ) : (
+                <Text style={[styles.statSmall, { marginTop: 8 }]}>{t('expenses', 'sales') || 'Expenses'}: {t('currency', 'common')} {Number(filteredProfits.expenses || 0).toLocaleString()}</Text>
+              )}
+            </View>
+            {filteredProfits.filteredExpenses && filteredProfits.filteredExpenses.length > 0 && (
               <TouchableOpacity
                 onPress={() => setExpensesModalVisible(true)}
-                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}
+                style={styles.eyeButton}
               >
-                <Text style={[styles.statSmall, { fontWeight: '700' }]}>{t('expenses', 'sales') || 'Expenses'}</Text>
                 <MaterialCommunityIcons name="eye" size={18} color="rgba(255,255,255,0.9)" />
               </TouchableOpacity>
-            ) : (
-              <Text style={[styles.statSmall, { marginTop: 8 }]}>{t('expenses', 'sales') || 'Expenses'}: {t('currency', 'common')} {Number(filteredProfits.expenses || 0).toLocaleString()}</Text>
             )}
           </LinearGradient>
 
@@ -573,25 +555,39 @@ export default function SalesScreen() {
             <Text style={styles.statLabel}>{t('averageSale', 'sales')}</Text>
           </LinearGradient>
 
-          {/* Asrat Bekurat (Church Donation) - Expandable */}
-          <ExpandableStatCard
-            gradientColors={['#514b4b', '#1796a18e']}
-            amount={filteredProfits.donation.toFixed(2)}
-            label={t('አስራት በኩራት', 'sales') || 'Donation (10%)'}
-            expanded={donationExpanded}
-            setExpanded={setDonationExpanded}
-            description={t('churchDonation', 'sales')}
-          />
+          {/* Asrat Bekurat (Church Donation) */}
+          <LinearGradient
+            colors={['#514b4b', '#1796a18e']}
+            style={styles.statCard}
+          >
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{filteredProfits.donation.toFixed(2)} {t('currency', 'common')}</Text>
+              <Text style={styles.statLabel}>{t('አስራት በኩራት', 'sales') || 'Donation (10%)'}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setDonationModalVisible(true)}
+              style={styles.eyeButton}
+            >
+              <MaterialCommunityIcons name="eye" size={18} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+          </LinearGradient>
 
-          {/* Zakat - Expandable */}
-          <ExpandableStatCard
-            gradientColors={['#352a22ab', '#6ad787d3']}
-            amount={filteredProfits.zakat.toFixed(2)}
-            label={t('ዘካ', 'sales') || 'Zakat (2.5%)'}
-            expanded={zekatExpanded}
-            setExpanded={setZekatExpanded}
-            description={t('zakat', 'sales') || '2.5% of total profit for charity (Zakat).'}
-          />
+          {/* Zakat */}
+          <LinearGradient
+            colors={['#352a22ab', '#6ad787d3']}
+            style={styles.statCard}
+          >
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{filteredProfits.zakat.toFixed(2)} {t('currency', 'common')}</Text>
+              <Text style={styles.statLabel}>{t('ዘካ', 'sales') || 'Zakat (2.5%)'}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setZakatModalVisible(true)}
+              style={styles.eyeButton}
+            >
+              <MaterialCommunityIcons name="eye" size={18} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
 
         {/* Payment Stats */}
@@ -796,6 +792,104 @@ export default function SalesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Donation Modal */}
+      <Modal
+        visible={donationModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDonationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>አስራት በኩራት - Church Donation (10%)</Text>
+              <TouchableOpacity onPress={() => setDonationModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.donationSection}>
+                <View style={styles.donationCard}>
+                  <Text style={styles.donationTitle}>Church Donation Calculation</Text>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>Total Profit</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.totalProfit.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>× 10% Rate</Text>
+                    <Text style={styles.calculationAmount}>× 0.10</Text>
+                  </View>
+                  <View style={[styles.calculationRow, styles.totalRow]}>
+                    <Text style={styles.calculationLabel}>Church Donation</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.donation.toFixed(2)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.donationInfo}>
+                  <Text style={styles.infoTitle}>About አስራት በኩራት</Text>
+                  <Text style={styles.infoText}>
+                    {t('churchDonation', 'sales') || 'አስራት በኩራት (Asrat Bekurat) is the traditional Ethiopian Orthodox Church donation, calculated as 10% of total profit. This sacred practice supports the church and community welfare.'}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    The donation amount is calculated from the raw profit before any expenses or other deductions.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Zakat Modal */}
+      <Modal
+        visible={zakatModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setZakatModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ዘካ - Zakat (2.5%)</Text>
+              <TouchableOpacity onPress={() => setZakatModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.zakatSection}>
+                <View style={styles.zakatCard}>
+                  <Text style={styles.zakatTitle}>Zakat Calculation</Text>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>Total Profit</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.totalProfit.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.calculationRow}>
+                    <Text style={styles.calculationLabel}>× 2.5% Rate</Text>
+                    <Text style={styles.calculationAmount}>× 0.025</Text>
+                  </View>
+                  <View style={[styles.calculationRow, styles.totalRow]}>
+                    <Text style={styles.calculationLabel}>Zakat Amount</Text>
+                    <Text style={styles.calculationAmount}>{t('currency', 'common')} {filteredProfits.zakat.toFixed(2)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.zakatInfo}>
+                  <Text style={styles.infoTitle}>About ዘካ (Zakat)</Text>
+                  <Text style={styles.infoText}>
+                    {t('zakat', 'sales') || 'Zakat is one of the Five Pillars of Islam, a mandatory form of almsgiving calculated as 2.5% of total wealth held for a full lunar year. It purifies wealth and helps the community.'}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    In this context, Zakat is calculated on the total profit amount and is intended for charitable purposes and community welfare.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -885,6 +979,16 @@ const styles = StyleSheet.create({
     width: (width - 40) / 2,
     padding: 16,
     borderRadius: 12,
+    position: 'relative',
+  },
+  statContent: {
+    flex: 1,
+  },
+  eyeButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    padding: 4,
   },
   statValue: {
     color: '#ffffff',
@@ -1009,6 +1113,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 12,
     textAlign: 'center',
+  },
+  donationSection: {
+    marginBottom: 20,
+  },
+  donationCard: {
+    backgroundColor: 'rgba(81, 75, 75, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(23, 150, 161, 0.3)',
+  },
+  donationTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  donationInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  infoTitle: {
+    color: '#f59e0b',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  infoText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  zakatSection: {
+    marginBottom: 20,
+  },
+  zakatCard: {
+    backgroundColor: 'rgba(53, 42, 34, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(106, 215, 135, 0.3)',
+  },
+  zakatTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  zakatInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   statLabel: {
     color: 'rgba(255, 255, 255, 0.8)',
@@ -1271,19 +1437,5 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  expandableRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  expandButton: {
-    padding: 4,
-  },
-  descriptionText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 11,
-    marginTop: 8,
-    lineHeight: 16,
   },
 });
