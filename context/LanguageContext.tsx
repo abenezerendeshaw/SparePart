@@ -1636,8 +1636,8 @@ inventory: {
       en: 'Pay & Send Receipt'
     },
     telegramMessageNote: {
-      am: 'ክሊክ አድርገው → ተሌግራም በቅድሚያ የተሞላ መልክ ይከፈታል። ክፍያ ከሰራ በኋላ ደረሰኝ ያያይዙ።',
-      en: 'Click → Telegram opens with pre‑filled message. Attach screenshot after payment.'
+      am: ' ክፍያ በ ቴሌብር ወይም በ ንግድባንክ (0912340172  ወይም 1000087549438 የአካውንት ስም "Abenezer Endeshaw" )  ክፍያ ከከፈሉ በኋላ ደረሰኝ ያያይዙ።',
+      en: 'Paywith → Telebirr 0912340172 or CBE 1000087549438 Account name ( Abenezer Endeshaw )  After payment, send the receipt screenshot.     '
     },
     accessRestricted: {
       am: 'መለያ ተገድቧል',
