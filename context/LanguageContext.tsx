@@ -23,10 +23,18 @@ export const translations: Translations = {
       am: 'አስቀምጥ',
       en: 'Save'
     },
-     available: {
+  
+  available: {
     am: 'አለ',
     en: 'Available'
   },
+
+  TelegramChat:{
+    am:"የቴሌግራም ቻት",
+    en: "Telegram Chat"
+
+  },
+
   price: {
     am: 'ዋጋ',
     en: 'Price'
@@ -48,6 +56,7 @@ export const translations: Translations = {
     am: 'ስፔሲፊክ ኢትዮጵያ መተግበሪያ',
     en: 'Specific Ethiopia Application'
   },
+
 
 
   website: {
@@ -435,10 +444,7 @@ export const translations: Translations = {
       am: 'የታገዱ',
       en: 'Inactive'
     },
-    expenses: {
-      am: 'ወጪዎችህን አስገባ',
-      en: 'Add Expenses'
-    },
+
   },
   
   // Add Product Screen

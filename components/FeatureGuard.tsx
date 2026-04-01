@@ -94,7 +94,7 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ children, feature, f
           style={styles.contactButton}
           onPress={() => {
             const message = `Hello! I want to upgrade my subscription. Current plan: ${details?.subscription_plan || 'Free'}. Please send payment details and available plans.`;
-            const telegramUrl = `${telegramLink || 'https://t.me/xesser'}?text=${encodeURIComponent(message)}`;
+            const telegramUrl = `${telegramLink || 'https://t.me/specificethiopiaInventory'}?text=${encodeURIComponent(message)}`;
             Linking.openURL(telegramUrl);
           }}
         >

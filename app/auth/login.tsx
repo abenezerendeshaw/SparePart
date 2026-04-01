@@ -265,7 +265,7 @@ export default function LoginScreen() {
             <View style={styles.footer}>
               <TouchableOpacity
                 style={styles.socialBtn}
-                onPress={() => Linking.openURL('https://t.me/specificautopart')}
+                onPress={() => Linking.openURL('https://t.me/specificethiopiaInventory')}
               >
                 <MaterialCommunityIcons name="near-me" size={22} color="#0088cc" />
                 <Text style={styles.socialText}>Telegram</Text>

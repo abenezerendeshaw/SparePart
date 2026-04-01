@@ -87,7 +87,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }
           {/* Actions */}
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => Linking.openURL(telegramLink || 'https://t.me/xesser')}
+            onPress={() => Linking.openURL(telegramLink || 'https://t.me/specificethiopiaInventory')}
           >
             <LinearGradient
               colors={['#2974ff', '#1a4c9e']}

@@ -3,15 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Linking,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Linking,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -40,13 +40,14 @@ export default function SubscriptionPackagesScreen() {
       const plansResponse = await api.get('/subscription', { params: { action: 'plans' } });
       const plansData = plansResponse.data.data; // { plans: [], telegram_link: '', ... }
       setPlans(plansData.plans || []);
-      setTelegramLink(plansData.telegram_link || subscriptionContext?.telegramLink || 'https://t.me/xesser');
+      setTelegramLink(plansData.telegram_link || subscriptionContext?.telegramLink || 'https://t.me/specificethiopiaInventory');
 
       // 2. Fetch user subscription status & details
       const userResponse = await api.get('/subscription', { params: { action: 'check' } });
       const userData = userResponse.data.data; // { is_locked, subscription_status, plan, trial_ends_at, expires_at, message }
 
       // Combine with context data for username/email (if not returned by API)
+// Inside fetchSubscriptionData, after getting userData:
       setDetails({
         subscription_status: userData.subscription_status,
         plan: userData.plan,
@@ -54,6 +55,7 @@ export default function SubscriptionPackagesScreen() {
         subscription_expires_at: userData.expires_at,
         username: subscriptionContext?.details?.username || 'user',
         email: subscriptionContext?.details?.email || '',
+        telegram_username: userData.telegram_username || subscriptionContext?.details?.telegram_username || '',
       });
     } catch (err: any) {
       console.error('Error fetching subscription data:', err);
@@ -62,7 +64,7 @@ export default function SubscriptionPackagesScreen() {
       // Fallback to context data if available
       if (subscriptionContext) {
         setPlans(subscriptionContext.plans || []);
-        setTelegramLink(subscriptionContext.telegramLink || 'https://t.me/xesser');
+        setTelegramLink(subscriptionContext.telegramLink || 'https://t.me/specificethiopiaInventory');
         setDetails(subscriptionContext.details || {});
       }
     } finally {
@@ -75,36 +77,49 @@ export default function SubscriptionPackagesScreen() {
   }, []);
 
   // Build Telegram deep link with pre‑filled message
-  const buildTelegramPaymentLink = (
-    telegramHandle: string,
-    username: string,
-    planName: string,
-    amount: number,
-    period: string
-  ) => {
-    const handle = telegramHandle.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '');
-    const baseUrl = `https://t.me/${handle}`;
-    const text = `✅ PAYMENT REQUEST - ${planName}\n\n` +
-      `💰 Amount: ${amount} ETB\n` +
-      `👤 Username: @${username}\n` +
-      `📦 Plan: ${period}\n\n` +
-      `📌 I have made the payment via Telebirr/Bank. Attached is the payment receipt screenshot.\n` +
-      `Please activate my subscription. Thank you!`;
-    return `${baseUrl}?text=${encodeURIComponent(text)}`;
-  };
+const buildTelegramPaymentLink = (
+  telegramHandle: string,
+  username: string,
+  planName: string,
+  amount: number,
+  period: string,
+  email?: string,
+  telegramUsername?: string
+) => {
+  const handle = telegramHandle.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '');
+  const baseUrl = `https://t.me/${handle}`;
+  let text = `✅ PAYMENT REQUEST - ${planName}\n\n` +
+    `💰 Amount: ${amount} ETB\n` +
+    `👤 Username: @${username}\n` +
+    `📦 Plan: ${period}\n\n` +
+    `📌 I have made the payment via Telebirr/Bank. Attached is the payment receipt screenshot.\n` +
+    `Please activate my subscription. Thank you!`;
 
-  const handlePackageSelect = (plan: any) => {
-    const period = plan.period || plan.duration || 'Monthly';
-    const amount = parseFloat(plan.price) || 0; // convert string price to number
-    const url = buildTelegramPaymentLink(
-      telegramLink,
-      details?.username || 'user',
-      `${plan.name} (${period})`,
-      amount,
-      period
-    );
-    Linking.openURL(url);
-  };
+  // Append email and Telegram username if available
+  if (email) {
+    text += `\n\n📧 Email: ${email}`;
+  }
+  if (telegramUsername) {
+    text += `\n💬 Telegram: @${telegramUsername}`;
+  }
+
+  return `${baseUrl}?text=${encodeURIComponent(text)}`;
+};
+
+const handlePackageSelect = (plan: any) => {
+  const period = plan.period || plan.duration || 'Monthly';
+  const amount = parseFloat(plan.price) || 0;
+  const url = buildTelegramPaymentLink(
+    telegramLink,
+    details?.username || 'user',
+    `${plan.name} (${period})`,
+    amount,
+    period,
+    details?.email,
+    details?.telegram_username  // we need to ensure this exists
+  );
+  Linking.openURL(url);
+};
 
   // Loading state
   if (loading) {
@@ -292,7 +307,7 @@ export default function SubscriptionPackagesScreen() {
                     <Text style={styles.stepText}>
                       {t('sendReceipt', 'subscription')
                         .replace('{username}', details?.username || 'user')
-                        .replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
+                        .replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'SpecificethiopiaSolution')}
                     </Text>
                   </View>
                 </View>
@@ -300,7 +315,7 @@ export default function SubscriptionPackagesScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={() => Linking.openURL(telegramLink)}>
                 <MaterialCommunityIcons name="send" size={16} color="#fff" />
                 <Text style={styles.contactButtonText}>
-                  {t('contactTelegram', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
+                  {t('contactTelegram', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'SpecificethiopiaSolution')}
                 </Text>
                 <MaterialCommunityIcons name="open-in-new" size={12} color="#fff" />
               </TouchableOpacity>
@@ -321,7 +336,7 @@ export default function SubscriptionPackagesScreen() {
               </View>
             </View>
             <View style={styles.reminderActions}>
-              <TouchableOpacity style={styles.telegramButton} onPress={() => Linking.openURL(telegramLink)}>
+              <TouchableOpacity style={styles.telegramButton} onPress={() => Linking.openURL('https://t.me/SpecificEthiopiaInvGroup')}>
                 <MaterialCommunityIcons name="send" size={14} color="#fff" />
                 <Text style={styles.telegramButtonText}>{t('openTelegramChat', 'subscription')}</Text>
               </TouchableOpacity>
@@ -334,7 +349,7 @@ export default function SubscriptionPackagesScreen() {
               {t('footerText', 'subscription').replace('{year}', new Date().getFullYear().toString())}
             </Text>
             <Text style={styles.footerSubtext}>
-              {t('needHelp', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'xesser')}
+              {t('needHelp', 'subscription').replace('{telegram}', telegramLink.replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '') || 'SpecificethiopiaSolution')}
             </Text>
           </View>
         </View>

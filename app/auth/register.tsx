@@ -157,7 +157,7 @@ export default function RegisterScreen() {
 
           {/* Simple Hero */}
           <View style={styles.simpleHero}>
-            <Text style={styles.simpleHeroTitle}>AutoParts Pro</Text>
+            <Text style={styles.simpleHeroTitle}>Specific Inventory</Text>
             <Text style={styles.simpleHeroSubtitle}>{t('ethiopianBadge', 'auth')}</Text>
           </View>
 

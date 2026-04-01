@@ -407,7 +407,7 @@ export default function Dashboard() {
       t('support', 'common'),
       t('supportMessage', 'common'),
       [
-        { text: t('call', 'common'), onPress: () => Linking.openURL('tel:+251972989963') },
+        { text: t('TelegramChat', 'common'), onPress: () => Linking.openURL('https://t.me/specificethiopiaInventory') },
         { text: t('email', 'common'), onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
         { text: t('cancel', 'common'), style: 'cancel' }
       ]
@@ -732,14 +732,14 @@ export default function Dashboard() {
 
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => router.push('/(tab)/products')}
+              onPress={() => router.push('/(tab)/expenses')}
             >
               <LinearGradient
                 colors={['#8b5cf6', '#6d28d9']}
                 style={styles.actionGradient}
               >
                 <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>{t('allProducts', 'common')}</Text>
+                <Text style={styles.actionText}>{t('addExpense', 'expenses')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -760,7 +760,11 @@ export default function Dashboard() {
           </View>
         </View>
 
-
+ {/* Contact Support Button */}
+        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
+          <MaterialCommunityIcons name="headset" size={20} color="#2974ff" />
+          <Text style={styles.supportText}>{t('support', 'common')}</Text>
+        </TouchableOpacity>
 
 
         

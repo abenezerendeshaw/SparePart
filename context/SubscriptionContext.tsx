@@ -175,7 +175,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
               }
             ]);
             setActivationInstructions('Please contact admin for activation instructions.');
-            setTelegramLink('https://t.me/xesser');
+            setTelegramLink('https://t.me/specificethiopiaInventory');
           }
         } catch (error) {
           console.error('Error fetching plans:', error);
@@ -243,7 +243,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }
           ]);
           setActivationInstructions('Please contact admin for activation instructions.');
-          setTelegramLink('https://t.me/xesser');
+          setTelegramLink('https://t.me/specificethiopiaInventory');
         }
       }
     } catch (error) {
