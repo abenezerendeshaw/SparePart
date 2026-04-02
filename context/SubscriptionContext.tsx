@@ -48,13 +48,13 @@ const FALLBACK_PLANS: Plan[] = [
     id: 'monthly',
     name: 'Monthly',
     duration: '30 days',
-    price: '200',
+    price: '600',
     period: 'Monthly',
     popular: false,
     badge: null,
     saving: null,
     duration_text: 'billed monthly',
-    message_suffix: 'Monthly Plan (200 ETB)',
+    message_suffix: 'Monthly Plan (600 ETB)',
     features: [
       'Full access to Inventory Management',
       'Sales & Purchase tracking',
@@ -68,13 +68,13 @@ const FALLBACK_PLANS: Plan[] = [
     id: 'quarterly',
     name: 'Quarterly',
     duration: '90 days',
-    price: '400',
+    price: '1200',
     period: 'Quarterly',
     popular: true,
-    badge: 'MOST POPULAR',
-    saving: 'Save 200 ETB',
+    badge: 'FREE TRIAL',
+    saving: 'Save 600 ETB',
     duration_text: 'every 3 months',
-    message_suffix: 'Quarterly Plan (400 ETB)',
+    message_suffix: 'Quarterly Plan (1200 ETB)',
     features: [
       'Full access to Inventory Management',
       'Sales & Purchase tracking',
@@ -88,13 +88,13 @@ const FALLBACK_PLANS: Plan[] = [
     id: 'yearly',
     name: 'Yearly',
     duration: '365 days',
-    price: '850',
+    price: '2550',
     period: 'Yearly',
     popular: false,
     badge: 'BEST VALUE',
-    saving: 'Save 1550 ETB/year',
+    saving: 'Save 4650 ETB/year',
     duration_text: 'billed annually',
-    message_suffix: 'Yearly Plan (850 ETB)',
+    message_suffix: 'Yearly Plan (2550 ETB)',
     features: [
       'Full access to Inventory Management',
       'Sales & Purchase tracking',
@@ -178,9 +178,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             Array.isArray(plansRes.data.data.plans)
           ) {
             const fallbackPrices: Record<string, string> = {
-              monthly: '200',
-              quarterly: '400',
-              yearly: '850',
+              monthly: '600',
+              quarterly: '1200',
+              yearly: '2550',
             };
             const processedPlans = plansRes.data.data.plans.map((plan: any) => ({
               ...plan,

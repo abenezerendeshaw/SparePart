@@ -3,12 +3,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -21,7 +21,7 @@ interface FeatureGuardProps {
 
 export const FeatureGuard: React.FC<FeatureGuardProps> = ({ children, feature, featureName }) => {
   const subscriptionContext = useSubscription();
-  const { isFeatureLocked, details, plans = [], telegramLink } = subscriptionContext || {};
+  const { isFeatureLocked, details, plans = [], telegramLink, refreshStatus } = subscriptionContext || {};
   const { t } = useLanguage();
   const router = useRouter();
 
@@ -100,6 +100,11 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ children, feature, f
         >
           <MaterialCommunityIcons name="send" size={20} color="#2974ff" style={{ marginRight: 8 }} />
           <Text style={styles.contactText}>{t('contactForPayment', 'subscription')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.refreshButton} onPress={refreshStatus}>
+          <MaterialCommunityIcons name="refresh" size={20} color="#10b981" style={{ marginRight: 8 }} />
+          <Text style={styles.refreshText}>{t('retry', 'common')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
@@ -249,5 +254,16 @@ const styles = StyleSheet.create({
     color: '#2974ff',
     marginLeft: 8,
     fontWeight: '600',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginTop: 4,
+  },
+  refreshText: {
+    color: '#10b981',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
