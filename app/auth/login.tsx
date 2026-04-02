@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StatusBar,
@@ -15,13 +16,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { useLanguage } from '../../context/LanguageContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import api from '../lib/api';
 import storage from '../lib/storage';
-import React from 'react';
-import { Linking } from 'react-native';
-import { useLanguage } from '../../context/LanguageContext';
-import LanguageSwitcher from '../../components/LanguageSwitcher';
-import { useSubscription } from '../../context/SubscriptionContext';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -265,7 +264,7 @@ export default function LoginScreen() {
             <View style={styles.footer}>
               <TouchableOpacity
                 style={styles.socialBtn}
-                onPress={() => Linking.openURL('https://t.me/specificethiopiaInventory')}
+                onPress={() => Linking.openURL('https://t.me/SpecificethiopiaSolution')}
               >
                 <MaterialCommunityIcons name="near-me" size={22} color="#0088cc" />
                 <Text style={styles.socialText}>Telegram</Text>

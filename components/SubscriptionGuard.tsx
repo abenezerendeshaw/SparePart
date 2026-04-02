@@ -3,13 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import storage from '../app/lib/storage';
 import { useLanguage } from '../context/LanguageContext';
@@ -87,7 +88,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }
           {/* Actions */}
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => Linking.openURL(telegramLink || 'https://t.me/specificethiopiaInventory')}
+            onPress={() => Linking.openURL(telegramLink || 'https://t.me/SpecificethiopiaSolution')}
           >
             <LinearGradient
               colors={['#2974ff', '#1a4c9e']}

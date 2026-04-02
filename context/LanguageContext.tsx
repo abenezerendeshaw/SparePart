@@ -1330,8 +1330,8 @@ profile: {
     en: 'About Us'
   },
   aboutText: {
-    am: 'አውቶፓርትስ ፕሮ የእቃ ክምችት አስተዳደር ሲስተም ነው። ንግድዎን በቀላሉ ለማስተዳደር፣ ምርቶችን ለመቆጣጠር እና ሽያጮችን ለመከታተል የተዘጋጀ ነው።',
-    en: 'AutoParts Pro is an inventory management system. It is designed to easily manage your business, track products, and monitor sales.'
+    am: 'ስፔሲፊክ አውቶፓርትስ ፕሮ የእቃ ክምችት አስተዳደር ሲስተም ነው። ንግድዎን በቀላሉ ለማስተዳደር፣ ምርቶችን ለመቆጣጠር እና ሽያጮችን ለመከታተል የተዘጋጀ ነው።',
+    en: 'Specific Inventory Pro is an inventory management system. It is designed to easily manage your business, track products, and monitor sales.'
   },
   version: {
     am: 'ስሪት',
@@ -1572,12 +1572,12 @@ inventory: {
       en: 'Expires'
     },
     active: {
-      am: 'ንቁ',
+      am: 'አገልግሎት የሚሰጥ',
       en: 'Active'
     },
     expired: {
-      am: 'ጊዜው አልቋል',
-      en: 'Expired'
+      am: 'ጊዜው አልቋል(ተዘግቷል)',
+      en: 'Expired(Locked)'
     },
     trial: {
       am: 'የሙከራ ጊዜ',

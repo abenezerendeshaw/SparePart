@@ -407,7 +407,7 @@ export default function Dashboard() {
       t('support', 'common'),
       t('supportMessage', 'common'),
       [
-        { text: t('TelegramChat', 'common'), onPress: () => Linking.openURL('https://t.me/specificethiopiaInventory') },
+        { text: t('TelegramChat', 'common'), onPress: () => Linking.openURL('https://t.me/SpecificethiopiaSolution') },
         { text: t('email', 'common'), onPress: () => Linking.openURL('mailto:envairnoha@gmail.com') },
         { text: t('cancel', 'common'), style: 'cancel' }
       ]

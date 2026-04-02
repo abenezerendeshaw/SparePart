@@ -203,12 +203,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } else {
             setPlans(FALLBACK_PLANS);
             setActivationInstructions('Please contact admin for activation instructions.');
-            setTelegramLink('https://t.me/specificethiopiaInventory');
+            setTelegramLink('https://t.me/SpecificethiopiaSolution');
           }
         } catch {
           setPlans(FALLBACK_PLANS);
           setActivationInstructions('Please contact admin for activation instructions.');
-          setTelegramLink('https://t.me/specificethiopiaInventory');
+          setTelegramLink('https://t.me/SpecificethiopiaSolution');
         }
       }
     } catch (error) {

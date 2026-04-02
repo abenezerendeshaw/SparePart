@@ -2,16 +2,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Linking,
-    Modal,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Linking,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -276,7 +276,7 @@ export default function SubscriptionPackagesScreen() {
             <View style={styles.reminderActions}>
               <TouchableOpacity
                 style={styles.telegramButton}
-                onPress={() => Linking.openURL('https://t.me/SpecificEthiopiaInvGroup')}
+                onPress={() => Linking.openURL('https://t.me/SpecificethiopiaSolution')}
               >
                 <MaterialCommunityIcons name="send" size={14} color="#fff" />
                 <Text style={styles.telegramButtonText}>{t('openTelegramChat', 'subscription')}</Text>

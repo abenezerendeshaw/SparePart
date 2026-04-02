@@ -4,19 +4,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    Share,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -133,6 +133,7 @@ export default function ProfileScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
+    refreshStatus();
     loadUserProfile();
   };
 
@@ -486,12 +487,8 @@ export default function ProfileScreen() {
           <View style={styles.infoCard}>
             <View style={styles.subscriptionHeader}>
               <View>
-                <Text style={styles.planNameText}>{details?.subscription_plan || 'Free Plan'}</Text>
-                <Text style={styles.expiryText}>
-                  {details?.subscription_expires_at 
-                    ? `${t('expires', 'subscription')}: ${formatDate(details.subscription_expires_at)}`
-                    : t('noActiveSubscription', 'subscription')}
-                </Text>
+                <Text style={styles.planNameText}>{details?.subscription_plan || 'Your Plan is'}</Text>
+
               </View>
               <View style={[
                 styles.statusBadge, 
@@ -538,22 +535,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Sync Status */}
-        {user.sync_status && (
-          <View style={styles.syncStatusContainer}>
-            <MaterialCommunityIcons 
-              name={user.sync_status === 'synced' ? 'check-circle' : 'sync'} 
-              size={16} 
-              color={user.sync_status === 'synced' ? '#10b981' : '#f59e0b'} 
-            />
-            <Text style={[
-              styles.syncStatusText,
-              { color: user.sync_status === 'synced' ? '#10b981' : '#f59e0b' }
-            ]}>
-              {user.sync_status === 'synced' ? t('synced', 'profile') : t('syncing', 'profile')}
-            </Text>
-          </View>
-        )}
 
         {/* About Us Section */}
         <View style={styles.section}>

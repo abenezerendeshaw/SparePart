@@ -15,6 +15,7 @@ import {
   View,
   ActivityIndicator,
   Animated,
+   Modal,
 } from 'react-native';
 import api from '../../lib/api';
 import storage from '../../lib/storage';
