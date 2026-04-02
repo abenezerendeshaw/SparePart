@@ -9,7 +9,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import storage from '../app/lib/storage';
 import { useLanguage } from '../context/LanguageContext';
@@ -21,7 +21,7 @@ interface SubscriptionGuardProps {
 
 export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   const subscriptionContext = useSubscription();
-  const { isLocked, details, plans = [], loading, refreshStatus, activationInstructions, telegramLink, showSubscriptionBanner } = subscriptionContext || {};
+  const { isLocked, details, plans = [], loading, refreshStatus, activationInstructions, telegramLink, showSubscriptionBanner, showCongrats, dismissCongrats } = subscriptionContext || {};
   const { t } = useLanguage();
   const router = useRouter();
 
@@ -124,6 +124,24 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }
 
   return (
     <>
+      {/* Congratulations Modal */}
+      <Modal visible={!!showCongrats} transparent animationType="fade" onRequestClose={dismissCongrats}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <LinearGradient colors={['#064e3b', '#065f46']} style={styles.modalGradient}>
+              <Text style={styles.modalEmoji}>🎉</Text>
+              <Text style={styles.modalTitle}>Subscription Activated!</Text>
+              <Text style={styles.modalSubtitle}>
+                Welcome, {details?.username || 'there'}! Your subscription is now active. Enjoy full access to all features.
+              </Text>
+              <TouchableOpacity style={styles.modalButton} onPress={dismissCongrats}>
+                <Text style={styles.modalButtonText}>Let's Go!</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
       {showSubscriptionBanner && (
         <View style={styles.bannerContainer}>
           <LinearGradient
@@ -366,4 +384,20 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontWeight: '600',
   },
+  // Congratulations modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  modalCard: { width: '100%', borderRadius: 24, overflow: 'hidden' },
+  modalGradient: { padding: 32, alignItems: 'center' },
+  modalEmoji: { fontSize: 56, marginBottom: 16 },
+  modalTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 12, textAlign: 'center' },
+  modalSubtitle: { fontSize: 15, color: '#a7f3d0', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
+  modalButton: {
+    backgroundColor: '#10b981', paddingVertical: 14, paddingHorizontal: 40,
+    borderRadius: 14, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+  },
+  modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

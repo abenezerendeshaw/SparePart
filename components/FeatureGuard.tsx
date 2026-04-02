@@ -40,7 +40,7 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ children, feature, f
 
         <Text style={styles.title}>{t('featureLocked', 'subscription')}</Text>
         <Text style={styles.message}>
-          {t('featureLockedMessage', 'subscription', { feature: featureName })}
+          {`${t('featureLockedMessage', 'subscription')} ${featureName}`}
         </Text>
 
         {/* Current Status */}

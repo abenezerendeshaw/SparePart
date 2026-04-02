@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import api from '../app/lib/api';
 import storage from '../app/lib/storage';
 
@@ -25,6 +26,7 @@ interface SubscriptionDetails {
   message: string;
   username?: string;
   email?: string;
+  telegram_username?: string;
 }
 
 interface SubscriptionContextType {
@@ -37,7 +39,72 @@ interface SubscriptionContextType {
   telegramLink: string;
   isFeatureLocked: (feature: 'sales' | 'inventory' | 'products') => boolean;
   showSubscriptionBanner: boolean;
+  showCongrats: boolean;
+  dismissCongrats: () => void;
 }
+
+const FALLBACK_PLANS: Plan[] = [
+  {
+    id: 'monthly',
+    name: 'Monthly',
+    duration: '30 days',
+    price: '200',
+    period: 'Monthly',
+    popular: false,
+    badge: null,
+    saving: null,
+    duration_text: 'billed monthly',
+    message_suffix: 'Monthly Plan (200 ETB)',
+    features: [
+      'Full access to Inventory Management',
+      'Sales & Purchase tracking',
+      'Product & Expense modules',
+      'Advanced Reports & Analytics',
+      'Mobile-optimized interface',
+      '24/7 Priority Support',
+    ],
+  },
+  {
+    id: 'quarterly',
+    name: 'Quarterly',
+    duration: '90 days',
+    price: '400',
+    period: 'Quarterly',
+    popular: true,
+    badge: 'MOST POPULAR',
+    saving: 'Save 200 ETB',
+    duration_text: 'every 3 months',
+    message_suffix: 'Quarterly Plan (400 ETB)',
+    features: [
+      'Full access to Inventory Management',
+      'Sales & Purchase tracking',
+      'Product & Expense modules',
+      'Advanced Reports & Analytics',
+      'Mobile-optimized interface',
+      '24/7 Priority Support',
+    ],
+  },
+  {
+    id: 'yearly',
+    name: 'Yearly',
+    duration: '365 days',
+    price: '850',
+    period: 'Yearly',
+    popular: false,
+    badge: 'BEST VALUE',
+    saving: 'Save 1550 ETB/year',
+    duration_text: 'billed annually',
+    message_suffix: 'Yearly Plan (850 ETB)',
+    features: [
+      'Full access to Inventory Management',
+      'Sales & Purchase tracking',
+      'Product & Expense modules',
+      'Advanced Reports & Analytics',
+      'Mobile-optimized interface',
+      '24/7 Priority Support',
+    ],
+  },
+];
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
@@ -48,24 +115,26 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
   const [activationInstructions, setActivationInstructions] = useState('');
   const [telegramLink, setTelegramLink] = useState('');
+  const [showCongrats, setShowCongrats] = useState(false);
+
+  // Track previous status to detect activation transitions
+  const previousStatusRef = useRef<string | null>(null);
+  const plansLoadedRef = useRef(false);
 
   const isFeatureLocked = (feature: 'sales' | 'inventory' | 'products'): boolean => {
     if (!details) return false;
-
-    // If subscription is active, no features are locked
     if (details.subscription_status === 'active') return false;
-
-    // If subscription is expired or trial ended, lock premium features
     if (details.subscription_status === 'expired' || details.subscription_status === 'trial_ended') {
       return ['sales', 'inventory'].includes(feature);
     }
-
     return false;
   };
 
   const showSubscriptionBanner = details ? details.subscription_status !== 'active' : false;
 
-  const checkSubscription = async () => {
+  const dismissCongrats = useCallback(() => setShowCongrats(false), []);
+
+  const checkSubscription = useCallback(async () => {
     try {
       const token = await storage.getItem('authToken');
       if (!token) {
@@ -74,174 +143,70 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
-      // Fetch status
       const statusRes = await api.get('/subscription?action=check');
       if (statusRes.data.status === 'success') {
-        const data = statusRes.data.data;
+        const data: SubscriptionDetails = statusRes.data.data;
+
+        // Detect activation: previous status was non-active, new status is active
+        const prev = previousStatusRef.current;
+        if (
+          prev !== null &&
+          prev !== 'active' &&
+          data.subscription_status === 'active'
+        ) {
+          setShowCongrats(true);
+          // Clear any pending transaction refs for all plans on activation
+          const planIds = ['monthly', 'quarterly', 'yearly'];
+          const userId = data.username || 'user';
+          await Promise.all(
+            planIds.map((pid) => storage.removeItem(`pending_txn_${pid}_${userId}`))
+          );
+        }
+
+        previousStatusRef.current = data.subscription_status;
         setDetails(data);
         setIsLocked(data.is_locked);
       }
 
-      // Fetch plans (only once or if needed)
-      if (plans.length === 0) {
+      // Fetch plans only once
+      if (!plansLoadedRef.current) {
         try {
           const plansRes = await api.get('/subscription?action=plans');
-          if (plansRes.data.status === 'success' && plansRes.data.data?.plans && Array.isArray(plansRes.data.data.plans)) {
-            // Fallback prices
+          if (
+            plansRes.data.status === 'success' &&
+            plansRes.data.data?.plans &&
+            Array.isArray(plansRes.data.data.plans)
+          ) {
             const fallbackPrices: Record<string, string> = {
-              'monthly': '200',
-              'quarterly': '400',
-              'yearly': '850'
+              monthly: '200',
+              quarterly: '400',
+              yearly: '850',
             };
-            // Ensure each plan has features array and price is string
             const processedPlans = plansRes.data.data.plans.map((plan: any) => ({
               ...plan,
               price: plan.price ? String(plan.price) : fallbackPrices[plan.id] || '0',
-              features: Array.isArray(plan.features) ? plan.features : [
-                'Full access to Inventory Management',
-                'Sales & Purchase tracking',
-                'Product & Expense modules',
-                'Advanced Reports & Analytics',
-                'Mobile-optimized interface',
-                '24/7 Priority Support'
-              ]
+              features: Array.isArray(plan.features)
+                ? plan.features
+                : [
+                    'Full access to Inventory Management',
+                    'Sales & Purchase tracking',
+                    'Product & Expense modules',
+                    'Advanced Reports & Analytics',
+                    'Mobile-optimized interface',
+                    '24/7 Priority Support',
+                  ],
             }));
             setPlans(processedPlans);
             setActivationInstructions(plansRes.data.data.activation_instructions || '');
             setTelegramLink(plansRes.data.data.telegram_link || '');
+            plansLoadedRef.current = true;
           } else {
-            // Fallback plans if API fails
-            console.warn('API did not return plans, using fallback data');
-            setPlans([
-              {
-                id: 'monthly',
-                name: 'Monthly',
-                duration: '30 days',
-                price: '200',
-                period: 'Monthly',
-                popular: false,
-                badge: null,
-                saving: null,
-                duration_text: 'billed monthly',
-                message_suffix: 'Monthly Plan (200 ETB)',
-                features: [
-                  'Full access to Inventory Management',
-                  'Sales & Purchase tracking',
-                  'Product & Expense modules',
-                  'Advanced Reports & Analytics',
-                  'Mobile-optimized interface',
-                  '24/7 Priority Support'
-                ]
-              },
-              {
-                id: 'quarterly',
-                name: 'Quarterly',
-                duration: '90 days',
-                price: '400',
-                period: 'Quarterly',
-                popular: true,
-                badge: 'MOST POPULAR',
-                saving: 'Save 200 ETB',
-                duration_text: 'every 3 months',
-                message_suffix: 'Quarterly Plan (400 ETB)',
-                features: [
-                  'Full access to Inventory Management',
-                  'Sales & Purchase tracking',
-                  'Product & Expense modules',
-                  'Advanced Reports & Analytics',
-                  'Mobile-optimized interface',
-                  '24/7 Priority Support'
-                ]
-              },
-              {
-                id: 'yearly',
-                name: 'Yearly',
-                duration: '365 days',
-                price: '850',
-                period: 'Yearly',
-                popular: false,
-                badge: 'BEST VALUE',
-                saving: 'Save 1550 ETB/year',
-                duration_text: 'billed annually',
-                message_suffix: 'Yearly Plan (850 ETB)',
-                features: [
-                  'Full access to Inventory Management',
-                  'Sales & Purchase tracking',
-                  'Product & Expense modules',
-                  'Advanced Reports & Analytics',
-                  'Mobile-optimized interface',
-                  '24/7 Priority Support'
-                ]
-              }
-            ]);
+            setPlans(FALLBACK_PLANS);
             setActivationInstructions('Please contact admin for activation instructions.');
             setTelegramLink('https://t.me/specificethiopiaInventory');
           }
-        } catch (error) {
-          console.error('Error fetching plans:', error);
-          // Use fallback plans on error
-          setPlans([
-            {
-              id: 'monthly',
-              name: 'Monthly',
-              duration: '30 days',
-              price: '200',
-              period: 'Monthly',
-              popular: false,
-              badge: null,
-              saving: null,
-              duration_text: 'billed monthly',
-              message_suffix: 'Monthly Plan (200 ETB)',
-              features: [
-                'Full access to Inventory Management',
-                'Sales & Purchase tracking',
-                'Product & Expense modules',
-                'Advanced Reports & Analytics',
-                'Mobile-optimized interface',
-                '24/7 Priority Support'
-              ]
-            },
-            {
-              id: 'quarterly',
-              name: 'Quarterly',
-              duration: '90 days',
-              price: '400',
-              period: 'Quarterly',
-              popular: true,
-              badge: 'MOST POPULAR',
-              saving: 'Save 200 ETB',
-              duration_text: 'every 3 months',
-              message_suffix: 'Quarterly Plan (400 ETB)',
-              features: [
-                'Full access to Inventory Management',
-                'Sales & Purchase tracking',
-                'Product & Expense modules',
-                'Advanced Reports & Analytics',
-                'Mobile-optimized interface',
-                '24/7 Priority Support'
-              ]
-            },
-            {
-              id: 'yearly',
-              name: 'Yearly',
-              duration: '365 days',
-              price: '850',
-              period: 'Yearly',
-              popular: false,
-              badge: 'BEST VALUE',
-              saving: 'Save 1550 ETB/year',
-              duration_text: 'billed annually',
-              message_suffix: 'Yearly Plan (850 ETB)',
-              features: [
-                'Full access to Inventory Management',
-                'Sales & Purchase tracking',
-                'Product & Expense modules',
-                'Advanced Reports & Analytics',
-                'Mobile-optimized interface',
-                '24/7 Priority Support'
-              ]
-            }
-          ]);
+        } catch {
+          setPlans(FALLBACK_PLANS);
           setActivationInstructions('Please contact admin for activation instructions.');
           setTelegramLink('https://t.me/specificethiopiaInventory');
         }
@@ -251,11 +216,23 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Initial load
   useEffect(() => {
     checkSubscription();
-  }, []);
+  }, [checkSubscription]);
+
+  // Re-fetch when app comes back to foreground (clears stale cache)
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        checkSubscription();
+      }
+    };
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [checkSubscription]);
 
   return (
     <SubscriptionContext.Provider
@@ -269,6 +246,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         telegramLink,
         isFeatureLocked,
         showSubscriptionBanner,
+        showCongrats,
+        dismissCongrats,
       }}
     >
       {children}
