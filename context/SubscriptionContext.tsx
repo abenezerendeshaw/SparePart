@@ -124,13 +124,16 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const isFeatureLocked = (feature: 'sales' | 'inventory' | 'products'): boolean => {
     if (!details) return false;
     if (details.subscription_status === 'active') return false;
-    if (details.subscription_status === 'expired' || details.subscription_status === 'trial_ended') {
+    if (details.subscription_status === 'trial') return false; // free trial = full access
+    if (details.subscription_status === 'expired' || details.subscription_status === 'locked') {
       return ['sales', 'inventory'].includes(feature);
     }
     return false;
   };
 
-  const showSubscriptionBanner = details ? details.subscription_status !== 'active' : false;
+  const showSubscriptionBanner = details
+    ? details.subscription_status !== 'active' && details.subscription_status !== 'trial'
+    : false;
 
   const dismissCongrats = useCallback(() => setShowCongrats(false), []);
 

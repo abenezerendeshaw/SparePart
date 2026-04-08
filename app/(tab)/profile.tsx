@@ -84,7 +84,7 @@ export default function ProfileScreen() {
       console.log('Fetching user profile with token:', token.substring(0, 20) + '...');
       
       const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
+        baseURL: 'https://specificethiopian.com/inventory/api/v1',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export default function ProfileScreen() {
       if (!token) return;
 
       const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
+        baseURL: 'https://specificethiopian.com/inventory/api/v1',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -195,7 +195,7 @@ export default function ProfileScreen() {
       if (!token) return;
 
       const api = axios.create({
-        baseURL: 'https://specificethiopia.com/inventory/api/v1',
+        baseURL: 'https://specificethiopian.com/inventory/api/v1',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -487,18 +487,50 @@ export default function ProfileScreen() {
           <View style={styles.infoCard}>
             <View style={styles.subscriptionHeader}>
               <View>
-                <Text style={styles.planNameText}>{details?.subscription_plan || 'Your Plan is'}</Text>
-
+                <Text style={styles.planLabel}>Your current plan is</Text>
+                <Text style={[styles.planNameText, { color: '#10b981' }]}>
+                  {details?.subscription_plan
+                    ? details.subscription_plan.charAt(0).toUpperCase() + details.subscription_plan.slice(1)
+                    : 'Quarterly'}
+                </Text>
+                {(() => {
+                  // Pick the relevant expiry date
+                  const expiryStr = details?.subscription_status === 'active'
+                    ? details?.subscription_expires_at
+                    : details?.trial_ends_at;
+                  if (!expiryStr) return null;
+                  const diff = Math.ceil((new Date(expiryStr).getTime() - Date.now()) / 86400000);
+                  if (diff <= 0) return (
+                    <Text style={styles.countdownExpired}>Expired</Text>
+                  );
+                  return (
+                    <Text style={styles.countdownText}>
+                      {diff} day{diff !== 1 ? 's' : ''} remaining
+                    </Text>
+                  );
+                })()}
               </View>
               <View style={[
-                styles.statusBadge, 
-                { backgroundColor: details?.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }
+                styles.statusBadge,
+                {
+                  backgroundColor:
+                    details?.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.2)' :
+                    details?.subscription_status === 'trial'  ? 'rgba(99, 102, 241, 0.2)' :
+                    'rgba(239, 68, 68, 0.2)'
+                }
               ]}>
                 <Text style={[
                   styles.statusBadgeText,
-                  { color: details?.subscription_status === 'active' ? '#10b981' : '#ef4444' }
+                  {
+                    color:
+                      details?.subscription_status === 'active' ? '#10b981' :
+                      details?.subscription_status === 'trial'  ? '#818cf8' :
+                      '#ef4444'
+                  }
                 ]}>
-                  {details?.subscription_status === 'active' ? t('active', 'subscription') : t('expired', 'subscription')}
+                  {details?.subscription_status
+                    ? details.subscription_status.charAt(0).toUpperCase() + details.subscription_status.slice(1)
+                    : 'Trial'}
                 </Text>
               </View>
             </View>
@@ -595,7 +627,7 @@ export default function ProfileScreen() {
             icon="web"
             title={t('website', 'common')}
             color="#8b5cf6"
-            onPress={() => Linking.openURL('https://specificethiopia.com/inventory/')}
+            onPress={() => Linking.openURL('https://specificethiopian.com/inventory/')}
           />
 
 
@@ -1153,6 +1185,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  planLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginBottom: 2,
+  },
+  countdownText: {
+    fontSize: 11,
+    color: '#10b981',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  countdownExpired: {
+    fontSize: 11,
+    color: '#ef4444',
+    marginTop: 4,
+    fontWeight: '600',
   },
   planNameText: {
     fontSize: 18,
